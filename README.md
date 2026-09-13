@@ -672,7 +672,7 @@ The node retention scoring function $`\psi(n)`$ balances text length, density, a
 A subtree $n$ is pruned from the document extraction tree if:
 
 ```math
-\text{Prune}(n) = \begin{cases} \text{True} & \text{if } \psi(n) < \theta_{\text{DOM}} \;\lor\; \delta(n) > 0.50 \\ \text{False} & \text{otherwise} \end{cases}
+\text{Prune}(n) = \begin{cases} \text{True} & \text{if } \psi(n) \lt \theta_{\text{DOM}} \;\lor\; \delta(n) \gt 0.50 \\ \text{False} & \text{otherwise} \end{cases}
 ```
 
 #### C. Cascade Extraction Fallback Decision Rule
@@ -733,7 +733,7 @@ When $`\mathbb{I}_{\text{pivot}} = 1`$, low-resource text is translated into Eng
 Given low-resource source tokens $`\mathbf{S} = (s_1, \dots, s_M)`$ and target English tokens $`\mathbf{E} = (e_1, \dots, e_N)`$, the translation model computes:
 
 ```math
-P(\mathbf{E} \mid \mathbf{S}) = \prod_{t=1}^N P_\theta(e_t \mid e_{<t}, \mathbf{S}) = \prod_{t=1}^N \text{softmax}\left( \mathbf{W}_v \mathbf{h}_t^{\text{dec}} \right)_{e_t}
+P(\mathbf{E} \mid \mathbf{S}) = \prod_{t=1}^N P_\theta(e_t \mid e_{\lt t}, \mathbf{S}) = \prod_{t=1}^N \text{softmax}\left( \mathbf{W}_v \mathbf{h}_t^{\text{dec}} \right)_{e_t}
 ```
 
 The decoder hidden state $`\mathbf{h}_t^{\text{dec}}`$ attends to the encoder token representations $`\mathbf{H}_{\mathbf{S}}`$ via multi-head cross-attention:
@@ -773,14 +773,14 @@ Stage 4 cleans, homogenizes, and restores punctuation and grammar in the text be
 When Romanized words (e.g., acronyms, names $`w_{\text{roman}}`$) are detected in native Indic prose, IndicXlit models character transduction using a sequence-to-sequence beam search:
 
 ```math
-\hat{w}_{\text{native}} = \arg\max_{w \in \Sigma_{\text{native}}^*} P(w \mid w_{\text{roman}}) = \arg\max_{c_{1:L}} \prod_{j=1}^L P(c_j \mid c_{<j}, w_{\text{roman}}; \theta_{\text{xlit}})
+\hat{w}_{\text{native}} = \arg\max_{w \in \Sigma_{\text{native}}^*} P(w \mid w_{\text{roman}}) = \arg\max_{c_{1:L}} \prod_{j=1}^L P(c_j \mid c_{\lt j}, w_{\text{roman}}; \theta_{\text{xlit}})
 ```
 
 #### B. Zero-Shot LLM Autoregressive Text Smoothing Objective (Qwen3-1.7B)
 The refinement model (executing in an isolated subprocess) minimizes the negative log-likelihood of restoring clean syntax, punctuation (e.g., Devanagari Danda `।`), and OCR typos conditioned on instructions $`\mathbf{X}_{\text{instruct}}`$:
 
 ```math
-\mathcal{L}_{\text{refine}}(\theta) = -\sum_{t=1}^T \log P_\theta\left(x_t \mid x_{<t}, \mathbf{X}_{\text{instruct}}, \mathbf{X}_{\text{input}}\right)
+\mathcal{L}_{\text{refine}}(\theta) = -\sum_{t=1}^T \log P_\theta\left(x_t \mid x_{\lt t}, \mathbf{X}_{\text{instruct}}, \mathbf{X}_{\text{input}}\right)
 ```
 
 #### C. Deterministic Constrained Decoding
@@ -842,7 +842,7 @@ Rather than applying a brittle static threshold, BharatSaar computes an adaptive
 A semantic chunk split is created at boundary $`i`$ if and only if:
 
 ```math
-\mathbb{I}_{\text{split}}(i) = \begin{cases} 1 & \text{if } \Delta_i \ge \tau_{95} \\ 0 & \text{if } \Delta_i < \tau_{95} \end{cases}
+\mathbb{I}_{\text{split}}(i) = \begin{cases} 1 & \text{if } \Delta_i \ge \tau_{95} \\ 0 & \text{if } \Delta_i \lt \tau_{95} \end{cases}
 ```
 
 #### D. BGE-M3 Dense Semantic Hypersphere Projection
@@ -906,7 +906,7 @@ s(E_A, E_B) = \mathbf{w}_{\text{cls}}^T \mathbf{h}_{[CLS]} + b_{\text{cls}}
 An event $E_B$ is classified as a redundant duplicate of $E_A$ and pruned if:
 
 ```math
-\text{IsDuplicate}(E_A, E_B) = \begin{cases} \text{True} & \text{if } s(E_A, E_B) > 1.0 \\ \text{False} & \text{if } s(E_A, E_B) \le 1.0 \end{cases}
+\text{IsDuplicate}(E_A, E_B) = \begin{cases} \text{True} & \text{if } s(E_A, E_B) \gt 1.0 \\ \text{False} & \text{if } s(E_A, E_B) \le 1.0 \end{cases}
 ```
 
 ---
@@ -938,14 +938,14 @@ Given queries $Q$, keys $K$, and values $V$ with head dimension $`d_k`$:
 where the causal autoregressive mask $`\mathbf{M}_{\text{causal}}`$ enforces temporal dependency:
 
 ```math
-\mathbf{M}_{\text{causal}}(i, j) = \begin{cases} 0 & \text{if } j \le i \\ -\infty & \text{if } j > i \end{cases}
+\mathbf{M}_{\text{causal}}(i, j) = \begin{cases} 0 & \text{if } j \le i \\ -\infty & \text{if } j \gt i \end{cases}
 ```
 
 #### D. Autoregressive Causal Likelihood & Controlled Nucleus Sampling
 Summary token generation minimizes autoregressive causal cross-entropy:
 
 ```math
-\mathcal{L}_{\text{CLM}}(\theta) = -\sum_{t=1}^T \log P_\theta(y_t \mid y_{<t}, \mathbf{X}_{\text{context}})
+\mathcal{L}_{\text{CLM}}(\theta) = -\sum_{t=1}^T \log P_\theta(y_t \mid y_{\lt t}, \mathbf{X}_{\text{context}})
 ```
 
 Tokens are sampled from the dynamically truncated nucleus subset $`\mathcal{V}^{(p)}`$:
@@ -965,7 +965,7 @@ When $`\mathbb{I}_{\text{pivot}} = 1`$, the pristine English intelligence payloa
 Given the generated English summary sequence $`\mathbf{E}_{\text{summary}} = (e_1, \dots, e_M)`$ and native target tokens $`\mathbf{S}_{\text{native}} = (s_1, \dots, s_N)`$:
 
 ```math
-P(\mathbf{S}_{\text{native}} \mid \mathbf{E}_{\text{summary}}) = \prod_{j=1}^N P_{\theta_{\text{sarvam}}}(s_j \mid s_{<j}, \mathbf{E}_{\text{summary}})
+P(\mathbf{S}_{\text{native}} \mid \mathbf{E}_{\text{summary}}) = \prod_{j=1}^N P_{\theta_{\text{sarvam}}}(s_j \mid s_{\lt j}, \mathbf{E}_{\text{summary}})
 ```
 
 #### B. Multi-Field Structured Payload Batch Factorization
@@ -1011,9 +1011,9 @@ R_{\text{LCS}} = \frac{\text{LCS}(\text{Ref}, \text{Cand})}{m}, \quad P_{\text{L
 ##### 3. BLEU Score (Bilingual Evaluation Understudy)
 
 ```math
-\text{BLEU} = \text{BP} \cdot \exp\left(\sum_{n=1}^4 \frac{1}{4} \log p_n\right), \quad \text{BP} = \begin{cases} 1 & \text{if } c > r \\ \exp\left(1 - \frac{r}{c}\right) & \text{if } c \le r \end{cases}
+\text{BLEU} = \text{BP} \cdot \exp\left(\sum_{n=1}^4 \frac{1}{4} \log p_n\right), \quad \text{BP} = \begin{cases} 1 & \text{if } c \gt r \\ \exp\left(1 - \frac{r}{c}\right) & \text{if } c \le r \end{cases}
 ```
-where $c$ is the candidate length, $r$ is the reference length, $p_n$ is modified n-gram precision, and $\text{BP}$ is the brevity penalty.
+where $`c`$ is the candidate length, $`r`$ is the reference length, $`p_n`$ is modified n-gram precision, and $`\text{BP}`$ is the brevity penalty.
 
 ##### 4. BERTScore (Contextual Semantic Preservation)
 For reference tokens $x$ and generated tokens $`\hat{x}`$ with unit embeddings $`\mathbf{e}_x, \mathbf{e}_{\hat{x}}`$:
@@ -1146,9 +1146,9 @@ Score / Chunks
                      Percentile Threshold
 ```
 
-- **$`\tau < P_{75}`$ (Under-chunked / Over-fragmented)**: Sentences with trivial nuance differences are split into tiny 1-sentence fragments, destroying paragraph context.
+- **$`\tau \lt P_{75}`$ (Under-chunked / Over-fragmented)**: Sentences with trivial nuance differences are split into tiny 1-sentence fragments, destroying paragraph context.
 - **$`\tau = P_{95}`$ (BharatSaar Setting)**: Perfect semantic grouping. Contiguous sentences describing the same sub-topic remain clustered; splits occur solely at genuine topical shifts.
-- **$`\tau > P_{99}`$ (Over-chunked / Under-fragmented)**: Chunks become overly large, diluting vector specificity and causing retrieval dilution.
+- **$`\tau \gt P_{99}`$ (Over-chunked / Under-fragmented)**: Chunks become overly large, diluting vector specificity and causing retrieval dilution.
 
 ---
 
