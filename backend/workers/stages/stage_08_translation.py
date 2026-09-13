@@ -79,73 +79,31 @@ def run_translation(self, doc_id: str, target_lang: str, source_lang: str = "eng
                 source_lang = code
                 break
         
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    tokenizer = None
-    model = None
-    model_dir_name = ""
-    
     try:
-        model_dir_name = "sarvam-translate"
-        weights_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "model_server", "weights", model_dir_name))
-        print(f"[Translation] Loading {model_dir_name} on {device.upper()} (4-bit NF4)...")
-            
-        tokenizer = AutoTokenizer.from_pretrained(weights_path, local_files_only=True)
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16
-        )
-        model = AutoModelForCausalLM.from_pretrained(
-            weights_path, local_files_only=True, quantization_config=bnb_config, device_map="auto"
-        )
-        
         target_lang_str = LANGUAGE_MAP.get(target_lang, target_lang)
+        print(f"[Translation] Requesting translation to {target_lang_str} via Sarvam (Isolated)...")
         
-        def _single_translate(text_to_translate, target_language_name):
-            messages = [
-                {"role": "system", "content": f"Translate the text below to {target_language_name}."},
-                {"role": "user", "content": text_to_translate}
-            ]
-            formatted_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-            inputs = tokenizer([formatted_text], return_tensors="pt").to(model.device)
-            with torch.no_grad():
-                generated_ids = model.generate(
-                    **inputs,
-                    max_new_tokens=1024,
-                    do_sample=True,
-                    temperature=0.01,
-                    num_return_sequences=1
-                )
-            output_ids = generated_ids[0][len(inputs.input_ids[0]):].tolist()
-            return tokenizer.decode(output_ids, skip_special_tokens=True)
-            
-        def translate(text):
-            if not text: return ""
-            
-            # Check if it's an Indic-to-Indic translation requiring English pivot
-            if source_lang != "eng_Latn" and target_lang != "eng_Latn":
-                # Pivot 1: Indic -> English
-                english_text = _single_translate(text, "English")
-                # Pivot 2: English -> Indic
-                return _single_translate(english_text, target_lang_str)
-            else:
-                # Direct translation: English -> Indic OR Indic -> English
-                return _single_translate(text, target_lang_str)
+        from workers.stages.run_sarvam_isolated import load_and_run_sarvam_isolated
 
-        t_headline = translate(doc.get("headline", ""))
-        t_detailed = translate(doc.get("detailed_summary", ""))
-        t_bullet = translate(doc.get("bullet_summary", ""))
-        t_chrono = translate(doc.get("chronological_events", ""))
+        tasks = [
+            {"id": "headline", "text": doc.get("headline", ""), "target_language": target_lang_str, "source_language": source_lang},
+            {"id": "detailed", "text": doc.get("detailed_summary", ""), "target_language": target_lang_str, "source_language": source_lang},
+            {"id": "bullet", "text": doc.get("bullet_summary", ""), "target_language": target_lang_str, "source_language": source_lang},
+            {"id": "chrono", "text": doc.get("chronological_events", ""), "target_language": target_lang_str, "source_language": source_lang},
+        ]
         
-        # Translate Keywords
         keywords = doc.get("keywords") or doc.get("intelligence", {}).get("keywords") or []
-        t_keywords = []
         if keywords:
-            kw_str = ", ".join(keywords)
-            t_kw_str = translate(kw_str)
-            if t_kw_str:
-                t_keywords = [k.strip() for k in t_kw_str.split(",")]
+            tasks.append({"id": "keywords", "text": ", ".join(keywords), "target_language": target_lang_str, "source_language": source_lang})
+        
+        results = load_and_run_sarvam_isolated(tasks)
+
+        t_headline = results.get("headline", "")
+        t_detailed = results.get("detailed", "")
+        t_bullet   = results.get("bullet", "")
+        t_chrono   = results.get("chrono", "")
+        t_kw_str   = results.get("keywords", "")
+        t_keywords = [k.strip() for k in t_kw_str.split(",")] if t_kw_str else []
         
         translations = doc.get("translations", {})
         translations[target_lang] = {
@@ -171,13 +129,4 @@ def run_translation(self, doc_id: str, target_lang: str, source_lang: str = "eng
             db = get_db()
             await db.jobs.update_one({"document_id": doc_id, "type": "TRANSLATION", "target_lang": target_lang}, {"$set": {"status": "FAILED"}})
         run_async(mark_job_failed())
-    finally:
-        if model is not None:
-            del model
-        if tokenizer is not None:
-            del tokenizer
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        print(f"[Translation] Unloaded {model_dir_name} from RAM successfully.")
 

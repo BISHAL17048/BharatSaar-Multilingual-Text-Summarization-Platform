@@ -60,63 +60,31 @@ def run_pivot_translation(self, previous_result: dict):
     if not text.strip():
         return previous_result
 
-    print(f"[{job_id}] ⚡ Pivot Translation: {original_language_name} → English using Sarvam...")
-
-    weights_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "model_server", "weights", "sarvam-translate"
-    ))
-
-    tokenizer = None
-    model = None
+    print(f"[{job_id}] ⚡ Pivot Translation: {original_language_name} → English using Sarvam (Isolated)...")
 
     try:
-        from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"[{job_id}] Loading sarvam-translate on {device.upper()} (4-bit NF4)...")
-
-        tokenizer = AutoTokenizer.from_pretrained(weights_path, local_files_only=True)
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16
-        )
-        model = AutoModelForCausalLM.from_pretrained(
-            weights_path, local_files_only=True,
-            quantization_config=bnb_config, device_map="auto"
-        )
-
-        def _translate_chunk(chunk):
-            messages = [
-                {"role": "system", "content": "Translate the text below to English."},
-                {"role": "user",   "content": chunk}
-            ]
-            formatted = tokenizer.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True
-            )
-            inputs = tokenizer([formatted], return_tensors="pt").to(model.device)
-            with torch.no_grad():
-                generated_ids = model.generate(
-                    **inputs,
-                    max_new_tokens=1024,
-                    do_sample=True,
-                    temperature=0.01,
-                    num_return_sequences=1
-                )
-            output_ids = generated_ids[0][len(inputs.input_ids[0]):].tolist()
-            return tokenizer.decode(output_ids, skip_special_tokens=True)
+        from workers.stages.run_sarvam_isolated import load_and_run_sarvam_isolated
 
         chunks = _chunk_text(text, max_chars=500)
-        translated_chunks = []
-        for i, chunk in enumerate(chunks):
-            print(f"[{job_id}] Translating chunk {i + 1}/{len(chunks)}...")
-            translated_chunks.append(_translate_chunk(chunk))
+        tasks = [
+            {"id": f"chunk_{i}", "text": chunk, "target_language": "English"}
+            for i, chunk in enumerate(chunks)
+        ]
 
-        english_text = "\n".join(translated_chunks)
+        print(f"[{job_id}] Translating {len(chunks)} chunks via isolated Sarvam...")
+        results = load_and_run_sarvam_isolated(tasks)
+
+        if not results:
+            raise RuntimeError("Isolated Sarvam process returned empty results")
+
+        translated_chunks = [results.get(f"chunk_{i}", "") for i in range(len(chunks))]
+        english_text = "\n".join(translated_chunks).strip()
+
+        if not english_text:
+            raise RuntimeError("Translated English text is empty")
 
         # Replace raw_text with English so all downstream stages work in English
-        previous_result["raw_text"]    = english_text
+        previous_result["raw_text"] = english_text
         previous_result["refined_text"] = ""   # Clear so Stage 4 re-refines in English
 
         # Tell downstream stages to generate the summary in English
@@ -130,15 +98,5 @@ def run_pivot_translation(self, previous_result: dict):
         print(f"[{job_id}] ❌ Pivot Translation failed: {e}. Proceeding with original language text.")
         # Disable back-translation too so we don't attempt it with garbled English
         previous_result["needs_english_pivot"] = False
-
-    finally:
-        if model is not None:
-            del model
-        if tokenizer is not None:
-            del tokenizer
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        print(f"[{job_id}] Unloaded sarvam-translate (pivot) from RAM.")
 
     return previous_result

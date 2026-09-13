@@ -103,63 +103,26 @@ def _back_translate_and_overwrite(
     if not original_language_name:
         return
 
-    print(f"[{job_id}] Back-translating English summary to {original_language_name} using Sarvam...")
-
-    weights_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), "..", "..", "..",
-        "model_server", "weights", "sarvam-translate"
-    ))
-
-    tokenizer = None
-    model     = None
+    print(f"[{job_id}] Back-translating English summary to {original_language_name} using Sarvam (Isolated)...")
 
     try:
-        from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig as BnBCfg
+        from workers.stages.run_sarvam_isolated import load_and_run_sarvam_isolated
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"[{job_id}] Loading sarvam-translate on {device.upper()} (4-bit NF4)...")
+        tasks = [
+            {"id": "headline", "text": headline, "target_language": original_language_name},
+            {"id": "detailed", "text": detailed_summary, "target_language": original_language_name},
+            {"id": "bullet", "text": bullet_summary, "target_language": original_language_name},
+        ]
+        kw_str = ", ".join(keywords) if keywords else ""
+        if kw_str:
+            tasks.append({"id": "keywords", "text": kw_str, "target_language": original_language_name})
 
-        tokenizer = AutoTokenizer.from_pretrained(weights_path, local_files_only=True)
-        bnb_config = BnBCfg(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16
-        )
-        model = AutoModelForCausalLM.from_pretrained(
-            weights_path, local_files_only=True,
-            quantization_config=bnb_config, device_map="auto"
-        )
+        results = load_and_run_sarvam_isolated(tasks)
 
-        def _translate(text_str: str) -> str:
-            if not text_str:
-                return ""
-            messages = [
-                {"role": "system", "content": f"Translate the text below to {original_language_name}."},
-                {"role": "user",   "content": text_str}
-            ]
-            formatted = tokenizer.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True
-            )
-            inputs = tokenizer([formatted], return_tensors="pt").to(model.device)
-            with torch.no_grad():
-                generated_ids = model.generate(
-                    **inputs,
-                    max_new_tokens=2048,
-                    do_sample=True,
-                    temperature=0.01,
-                    num_return_sequences=1
-                )
-            output_ids = generated_ids[0][len(inputs.input_ids[0]):].tolist()
-            return tokenizer.decode(output_ids, skip_special_tokens=True)
-
-        native_headline  = _translate(headline)
-        native_detailed  = _translate(detailed_summary)
-        native_bullet    = _translate(bullet_summary)
-
-        # Keywords: translate as one comma-separated string
-        kw_str          = ", ".join(keywords) if keywords else ""
-        native_kw_str   = _translate(kw_str)
+        native_headline = results.get("headline", headline)
+        native_detailed = results.get("detailed", detailed_summary)
+        native_bullet   = results.get("bullet", bullet_summary)
+        native_kw_str   = results.get("keywords", kw_str)
         native_keywords = [k.strip() for k in native_kw_str.split(",")] if native_kw_str else keywords
 
         # Overwrite the English summary in MongoDB with the original-language version
@@ -179,15 +142,6 @@ def _back_translate_and_overwrite(
 
     except Exception as e:
         print(f"[{job_id}] Back-translation failed: {e}. English summary will be retained.")
-    finally:
-        if model is not None:
-            del model
-        if tokenizer is not None:
-            del tokenizer
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        print(f"[{job_id}] Unloaded sarvam-translate (back-translation) from RAM.")
 
 async def build_context_from_chroma(user_id: str, doc_id: str, keywords: list, fallback_text: str) -> str:
     """Queries ChromaDB using BGE-M3 for long context retrieval, scoped to the current document."""
