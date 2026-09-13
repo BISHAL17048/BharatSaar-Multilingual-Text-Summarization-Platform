@@ -1,0 +1,16 @@
+# vLLM Engine (High-throughput serving for Qwen3)
+# Note: vLLM on Windows requires WSL2 or specific pre-built wheels. 
+# Providing fallback to standard huggingface pipelines if vLLM fails.
+vllm>=0.4.0 ; sys_platform == 'linux' 
+
+# Standard HuggingFace Fallback / Base requirements
+torch>=2.1.2 --index-url https://download.pytorch.org/whl/cu121
+transformers>=4.38.0
+accelerate>=0.27.0
+tiktoken>=0.6.0
+einops>=0.7.0
+
+# API Server
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.0.0

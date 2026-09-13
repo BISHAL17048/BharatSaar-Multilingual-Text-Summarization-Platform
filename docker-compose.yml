@@ -1,0 +1,10 @@
+services:
+  indic_nlp_service:
+    build:
+      context: ./model_server/indic_nlp_service
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./model_server/weights:/app/model_server/weights:ro
+    restart: unless-stopped

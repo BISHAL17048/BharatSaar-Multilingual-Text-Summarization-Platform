@@ -1,0 +1,12 @@
+huggingface_hub
+crawl4ai
+trafilatura
+indic-nlp-library
+keybert
+bertopic
+pymupdf
+llama-index-core
+llama-index-embeddings-huggingface
+fasttext-wheel
+requests
+tqdm

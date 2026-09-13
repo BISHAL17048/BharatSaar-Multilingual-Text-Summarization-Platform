@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+httpx
+pydantic
+pydantic-settings
+python-docker  # To dynamically spin up/down model containers to save VRAM

@@ -1,0 +1,15 @@
+# PaddleOCR & Vision Models
+paddlepaddle-gpu>=2.6.0
+paddleocr>=2.7.0.3
+opencv-python>=4.8.0.76
+
+# Image & PDF Processing
+PyMuPDF>=1.23.0
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# API Server
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.0.0
+python-multipart

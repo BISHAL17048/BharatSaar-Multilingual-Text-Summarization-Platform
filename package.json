@@ -1,0 +1,13 @@
+{
+  "name": "docintel-platform",
+  "version": "1.0.0",
+  "description": "BharatSaar Platform",
+  "scripts": {
+    "dev": "concurrently \"cd frontend && npm run dev\" \"cd backend && ..\\.venv\\Scripts\\python -m uvicorn core.app:app --host 0.0.0.0 --port 8000 --reload\" \"cd backend && set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True && ..\\.venv\\Scripts\\python -m celery -A workers.celery_app worker -l INFO --pool=solo -Q cpu_queue,ocr_queue,llm_queue,embedding_queue,translation_queue,dlq_queue,celery\"",
+    "dev:global": "concurrently \"cd frontend && npm run dev\" \"cd backend && python -m uvicorn core.app:app --host 0.0.0.0 --port 8000 --reload\" \"cd backend && set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True && python -m celery -A workers.celery_app worker -l INFO --pool=solo -Q cpu_queue,ocr_queue,llm_queue,embedding_queue,translation_queue,dlq_queue,celery\""
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
+

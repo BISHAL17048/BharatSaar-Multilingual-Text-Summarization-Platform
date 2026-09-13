@@ -1,0 +1,15 @@
+# Intelligent Web Extractors
+crawl4ai>=0.2.73
+trafilatura>=1.8.1
+
+# HTML Parsers
+beautifulsoup4>=4.12.3
+lxml>=5.1.0
+
+# Playwright for Crawl4AI dynamic rendering
+playwright>=1.42.0
+
+# API Server
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.0.0
