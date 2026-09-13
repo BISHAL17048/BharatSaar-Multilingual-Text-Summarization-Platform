@@ -733,7 +733,7 @@ When $`\mathbb{I}_{\text{pivot}} = 1`$, low-resource text is translated into Eng
 Given low-resource source tokens $`\mathbf{S} = (s_1, \dots, s_M)`$ and target English tokens $`\mathbf{E} = (e_1, \dots, e_N)`$, the translation model computes:
 
 ```math
-P(\mathbf{E} \mid \mathbf{S}) = \prod_{t=1}^N P_\theta(e_t \mid e_{<t>, \mathbf{S}) = \prod_{t=1}^N \text{softmax}\left( \mathbf{W}_v \mathbf{h}_t^{\text{dec}} \right)_{e_t}
+P(\mathbf{E} \mid \mathbf{S}) = \prod_{t=1}^N P_\theta(e_t \mid e_{<t}, \mathbf{S}) = \prod_{t=1}^N \text{softmax}\left( \mathbf{W}_v \mathbf{h}_t^{\text{dec}} \right)_{e_t}
 ```
 
 The decoder hidden state $`\mathbf{h}_t^{\text{dec}}`$ attends to the encoder token representations $`\mathbf{H}_{\mathbf{S}}`$ via multi-head cross-attention:
@@ -753,14 +753,14 @@ where $`Q_X(p)`$ is the probit function of the standard normal distribution.
 For weight tensor block $B$ with block-wise scaling factor $`\gamma = \max_{w \in B} |w|`$, the quantized 4-bit index $`c_w`$ and reconstructed weight $`\hat{w}`$ are:
 
 ```math
-c_w = \operatorname*{argmin}_{k \in \{1,\dots,16\}} \left| \frac{w}{\gamma} - q_k \right|, \quad \hat{w} = \gamma \cdot q_{c_w}
+c_w = \arg\min_{k \in \{1,\dots,16\}} \left| \frac{w}{\gamma} - q_k \right|, \quad \hat{w} = \gamma \cdot q_{c_w}
 ```
 
 #### C. Context Window Bounded Partitioning Constraint
 To eliminate attention saturation and sequence truncation, source text $T$ is partitioned into bounded segments:
 
 ```math
-\mathcal{P}(T) = \{C_1, C_2, \dots, C_K\} \quad \text{subject to } \text{len}(C_k) \le 500, \quad \text{boundary}(C_k) \in \{\text{'\textbackslash n'}, \text{'.' }, \text{'।'}\}
+\mathcal{P}(T) = \{C_1, C_2, \dots, C_K\} \quad \text{subject to } \text{len}(C_k) \le 500, \quad \text{boundary}(C_k) \in \{\text{'}\backslash\text{n'}, \text{'.' }, \text{'।'}\}
 ```
 
 ---
@@ -773,7 +773,7 @@ Stage 4 cleans, homogenizes, and restores punctuation and grammar in the text be
 When Romanized words (e.g., acronyms, names $`w_{\text{roman}}`$) are detected in native Indic prose, IndicXlit models character transduction using a sequence-to-sequence beam search:
 
 ```math
-\hat{w}_{\text{native}} = \operatorname*{argmax}_{w \in \Sigma_{\text{native}}^*} P(w \mid w_{\text{roman}}) = \operatorname*{argmax}_{c_{1:L}} \prod_{j=1}^L P(c_j \mid c_{<j}, w_{\text{roman}}; \theta_{\text{xlit}})
+\hat{w}_{\text{native}} = \arg\max_{w \in \Sigma_{\text{native}}^*} P(w \mid w_{\text{roman}}) = \arg\max_{c_{1:L}} \prod_{j=1}^L P(c_j \mid c_{<j}, w_{\text{roman}}; \theta_{\text{xlit}})
 ```
 
 #### B. Zero-Shot LLM Autoregressive Text Smoothing Objective (Qwen3-1.7B)
@@ -787,7 +787,7 @@ The refinement model (executing in an isolated subprocess) minimizes the negativ
 To strictly prevent creative hallucinations or semantic drift during text smoothing, the decoding temperature is constrained:
 
 ```math
-\hat{x}_t = \operatorname*{argmax}_{w \in \mathcal{V}} \left[ \frac{\exp(z_w / T)}{\sum_{w' \in \mathcal{V}} \exp(z_{w'} / T)} \right]_{T \to 0^+} = \operatorname*{argmax}_{w \in \mathcal{V}} z_w
+\hat{x}_t = \arg\max_{w \in \mathcal{V}} \left[ \frac{\exp(z_w / T)}{\sum_{w' \in \mathcal{V}} \exp(z_{w'} / T)} \right]_{T \to 0^+} = \arg\max_{w \in \mathcal{V}} z_w
 ```
 
 ---
@@ -875,7 +875,7 @@ Let $`\mathbf{e}_D`$ be the embedding of the document text and $`\mathbf{e}_{c_i
 To prevent extracted keywords from collapsing into repetitive synonyms, keywords are selected greedily via MMR:
 
 ```math
-c^* = \operatorname*{argmax}_{c_i \in C \setminus S} \left[ \lambda \cos(\mathbf{e}_{c_i}, \mathbf{e}_D) - (1 - \lambda) \max_{c_j \in S} \cos(\mathbf{e}_{c_i}, \mathbf{e}_{c_j}) \right]
+c^* = \arg\max_{c_i \in C \setminus S} \left[ \lambda \cos(\mathbf{e}_{c_i}, \mathbf{e}_D) - (1 - \lambda) \max_{c_j \in S} \cos(\mathbf{e}_{c_i}, \mathbf{e}_{c_j}) \right]
 ```
 where $S$ is the set of already selected keywords, $C \setminus S$ is the candidate pool, and $`\lambda = 0.65`$.
 
@@ -926,7 +926,7 @@ The query vector $`\mathbf{q} \in \mathbb{R}^{1024}`$ is constructed by embeddin
 To prevent cross-document contamination in concurrent environments, retrieval is partitioned strictly by metadata:
 
 ```math
-\mathcal{K}^* = \operatorname*{arg\,top\,12}_{j \in \{1, \dots, N\} \atop \text{user\_id}(j) = u \;\land\; \text{doc\_id}(j) = d} \left( 1.0 - \mathcal{D}_{\text{HNSW}}(\mathbf{q}, \mathbf{k}_j) \right)
+\mathcal{K}^* = \arg\max^{(12)}_{j \in \{1, \dots, N\} \atop \text{user\_id}(j) = u \;\land\; \text{doc\_id}(j) = d} \left( 1.0 - \mathcal{D}_{\text{HNSW}}(\mathbf{q}, \mathbf{k}_j) \right)
 ```
 
 #### C. Scaled Dot-Product Multi-Head Causal Self-Attention (Qwen3-4B)
@@ -972,7 +972,7 @@ P(\mathbf{S}_{\text{native}} \mid \mathbf{E}_{\text{summary}}) = \prod_{j=1}^N P
 For the structured output vector $`\mathbf{Y}_{\text{en}} = [ \text{Headline}_{\text{en}}, \text{Summary}_{\text{en}}, \text{Bullets}_{\text{en}}, \text{Keywords}_{\text{en}} ]^T`$, each field is back-translated independently to preserve exact schema typology:
 
 ```math
-\mathbf{Y}_{\text{native}}^{(k)} = \operatorname*{argmax}_{\mathbf{S}} P\left(\mathbf{S} \mid \mathbf{Y}_{\text{en}}^{(k)}; \theta_{\text{sarvam}}\right), \quad \forall k \in \{1, 2, 3, 4\}
+\mathbf{Y}_{\text{native}}^{(k)} = \arg\max_{\mathbf{S}} P\left(\mathbf{S} \mid \mathbf{Y}_{\text{en}}^{(k)}; \theta_{\text{sarvam}}\right), \quad \forall k \in \{1, 2, 3, 4\}
 ```
 ensuring complete preservation of native grammar, orthography, and script conventions.
 
