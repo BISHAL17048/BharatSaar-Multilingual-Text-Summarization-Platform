@@ -291,10 +291,10 @@ flowchart TD
   3. **Fallback Verification**: Uses Python `langdetect` if the local classifier confidence score drops below 0.70.
   4. **Indic NLP Unicode Normalization**: Applies `IndicNLP` rule sets to repair broken Unicode codepoints, align native diacritics (Matras), and resolve script-specific encoding artifacts.
   5. **The Critical Routing Decision (The Post-Identification Fork)**:
-     - **If High / Normal-Resource** ($\in$ Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese, Urdu, Nepali, English):
+     - **If High / Normal-Resource** (in Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese, Urdu, Nepali, English):
        - Sets `needs_english_pivot = False`.
        - Directs execution to **🟢 Part 1 (Direct Native Pipeline)**.
-     - **If Low-Resource** ($\in$ Bodo, Dogri, Kashmiri, Konkani, Maithili, Manipuri, Sanskrit, Santali, Sindhi):
+     - **If Low-Resource** (in Bodo, Dogri, Kashmiri, Konkani, Maithili, Manipuri, Sanskrit, Santali, Sindhi):
        - Sets `needs_english_pivot = True`.
        - Securely records `original_language_code` and `original_language_name` for subsequent back-translation.
        - Directs execution to **🟠 Part 2 (The English Pivot Pipeline)**.
@@ -321,7 +321,7 @@ flowchart TD
 #### Stage-by-Stage Breakdown (Part 1: Normal-Resource)
 
 ##### Stage 4: Transliteration & Native LLM Refinement (IndicXlit & Qwen3-1.7B)
-- **What it does*y*: Cleans, standardizes, and homogenizes the text directly in the native script.
+- **What it does**: Cleans, standardizes, and homogenizes the text directly in the native script.
 - **How it works (Step-by-Step)**:
   1. **Script Homogenization (IndicXlit)**: Scans for rogue Romanized words or acronyms (e.g., "AIIMS", "PMO", "ISRO") and transliterates them into the native script (e.g., "एम्स", "पीएमओ", "इसरो"), ensuring homogenous tokenization.
   2. **Isolated Subprocess Execution**: Spawns an isolated Python worker process with a clean CUDA context.
@@ -332,14 +332,14 @@ flowchart TD
 - **What it does**: Groups contextually related native sentences into topical chunks and indexes them into vector space.
 - **How it works (Step-by-Step)**:
   1. **Neural Sentence Boundary Detection (SaT)**: Uses `sat-3l-sm` to identify authentic sentence terminators across Indic scripts, bypassing flawed regex punctuation assumptions.
-  2. **Topic Grouping (LlamaIndex + BGE-M3)**: Evaluates adjacent sentences using `BGE-M3` dense embeddings to compute cosine similarity $\text{Sim}(s_i, s_{i+1})$.
-  3. **Dynamic 95th Percentile Breakpoints**: Places splits only at the top 5% greatest semantic distance drops ($\tau_{95}$), clustering thematic sentences into coherent chunks.
+  2. **Topic Grouping (LlamaIndex + BGE-M3)**: Evaluates adjacent sentences using `BGE-M3` dense embeddings to compute cosine similarity $`\text{Sim}(s_i, s_{i+1})`$.
+  3. **Dynamic 95th Percentile Breakpoints**: Places splits only at the top 5% greatest semantic distance drops ($`\tau_{95}`$), clustering thematic sentences into coherent chunks.
   4. **Vector Storage (ChromaDB)**: Embeds each chunk into a 1024-dimensional dense vector and a sparse lexical vector via `BGE-M3`, saving them to ChromaDB strictly scoped by `user_id` and `doc_id`.
 
 ##### Stage 6: Native Semantic Intelligence & Event Deduplication (IndicBERT KeyBERT + BGE-Reranker)
 - **What it does**: Identifies salient keywords, models narrative topic themes, and deduplicates reported news events directly from native text.
 - **How it works (Step-by-Step)**:
-  1. **Keyword Extraction (KeyBERT + IndicBERT-v3)**: Computes candidate $n$-gram embeddings and applies Maximal Marginal Relevance (MMR) to select the top 5 most salient native keywords.
+  1. **Keyword Extraction (KeyBERT + IndicBERT-v3)**: Computes candidate n-gram embeddings and applies Maximal Marginal Relevance (MMR) to select the top 5 most salient native keywords.
   2. **Topic Modeling (BERTopic)**: Clusters sentence representations using c-TF-IDF to identify overarching narrative themes.
   3. **Cross-Encoder Event Deduplication (BGE-Reranker-v2-m3)**: Passes event candidate pairs through cross-attention. If the similarity score exceeds 1.0, duplicate events are pruned.
 
@@ -461,7 +461,7 @@ sequenceDiagram
 
 ##### Stage 5: High-Precision English Semantic Chunking & Vectorization (SaT, BGE-M3 & ChromaDB)
 - Because the text is now English, `SaT-3L-SM` and `BGE-M3` operate at their highest theoretical benchmark performance.
-- Sentences are grouped via adjacent cosine similarity at the 95th percentile threshold ($\tau_{95}$) and indexed into ChromaDB with 1024-dimensional dense vectors.
+- Sentences are grouped via adjacent cosine similarity at the 95th percentile threshold ($`\tau_{95}`$) and indexed into ChromaDB with 1024-dimensional dense vectors.
 
 ##### Stage 6: English Intelligence & Deduplication (KeyBERT + BERTopic + BGE-Reranker)
 - Extracts high-confidence English keywords via `KeyBERT` (backed by `IndicBERT-v3`).
@@ -490,12 +490,12 @@ sequenceDiagram
 |---|---|---|
 | **Target Languages** | Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese, Urdu, Nepali, English | Bodo, Dogri, Kashmiri, Konkani, Maithili, Manipuri, Sanskrit, Santali, Sindhi |
 | **Pivot Required?** | ❌ **No** (Direct Native Execution) | ✅ **Yes** (English Pivot Architecture) |
-| **Stage 3b Translation** | ⏭️ Skipped (Pass-through) | 🔄 Native $\to$ English (Sarvam 4-bit NF4) |
+| **Stage 3b Translation** | ⏭️ Skipped (Pass-through) | 🔄 Native → English (Sarvam 4-bit NF4) |
 | **Refinement Stage** | Native Script via IndicXlit + Qwen3-1.7B | English Prose via Qwen3-1.7B |
 | **Semantic Chunking** | SaT Native Script + BGE-M3 | SaT English + BGE-M3 |
 | **Vector Space** | Multilingual Indic Hypersphere | English Semantic Hypersphere |
 | **RAG Summarization** | Qwen3-4B Direct Native Output | Qwen3-4B Pristine English Output |
-| **Stage 7b Back-Translation** | ⏭️ Skipped | 🔄 English $\to$ Native Script (Sarvam) |
+| **Stage 7b Back-Translation** | ⏭️ Skipped | 🔄 English → Native Script (Sarvam) |
 | **End-to-End Latency** | **~24.4 seconds** (3,000 words) | **~33.0 seconds** (3,000 words) |
 | **ROUGE-L Score** | **78.4% - 84.1%** | **68.1% - 76.5%** (+110% vs native direct) |
 | **Memory Peak** | 5.2 GB (Qwen3-4B Subprocess) | 5.2 GB (Qwen3-4B Subprocess) |
@@ -648,24 +648,39 @@ Every stage of BharatSaar is governed by formal mathematical optimization criter
 Web extraction transforms raw, unformatted HTML trees contaminated with advertisements, paywalls, and navigation bars into pure, continuous news prose.
 
 #### A. Text-to-HTML Density Ratio Heuristic (Trafilatura Pruning)
-For any DOM tree node $n$, let $\text{Text}(n)$ denote the visible text characters and $\text{HTML}(n)$ denote the raw HTML source code of the subtree rooted at $n$. The text density $\rho(n)$ is defined as:
-$$\rho(n) = \frac{\text{len}(\text{Text}(n))}{\text{len}(\text{HTML}(n))} \in [0, 1]$$
+For any DOM tree node $n$, let $`\text{Text}(n)`$ denote the visible text characters and $`\text{HTML}(n)`$ denote the raw HTML source code of the subtree rooted at $n$. The text density $`\rho(n)`$ is defined as:
 
-High-density nodes ($\rho(n) \to 1$) correspond to authentic article body text, while low-density nodes ($\rho(n) \to 0$) correspond to heavily tagged markup (e.g., navigation ribbons, advertisement slots).
+```math
+\rho(n) = \frac{\text{len}(\text{Text}(n))}{\text{len}(\text{HTML}(n))} \in [0, 1]
+```
+
+High-density nodes ($`\rho(n) \to 1`$) correspond to authentic article body text, while low-density nodes ($`\rho(n) \to 0`$) correspond to heavily tagged markup (e.g., navigation ribbons, advertisement slots).
 
 #### B. Anchor Text Penalty & Link Density Constraint
-Navigation headers, footers, and affiliate carousels possess high text volume composed almost entirely of hyperlinks. The link density $\delta(n)$ is formulated as:
-$$\delta(n) = \frac{\text{len}(\text{AnchorText}(n))}{\text{len}(\text{Text}(n))} \in [0, 1]$$
+Navigation headers, footers, and affiliate carousels possess high text volume composed almost entirely of hyperlinks. The link density $`\delta(n)`$ is formulated as:
 
-The node retention scoring function $\psi(n)$ balances text length, density, and penalizes hyperlinked boilerplate:
-$$\psi(n) = \rho(n) \cdot \left(1 - \delta(n)\right)^\alpha \cdot \log\left(\text{len}(\text{Text}(n)) + 1\right), \quad \alpha = 2.0$$
+```math
+\delta(n) = \frac{\text{len}(\text{AnchorText}(n))}{\text{len}(\text{Text}(n))} \in [0, 1]
+```
+
+The node retention scoring function $`\psi(n)`$ balances text length, density, and penalizes hyperlinked boilerplate:
+
+```math
+\psi(n) = \rho(n) \cdot \left(1 - \delta(n)\right)^\alpha \cdot \log\left(\text{len}(\text{Text}(n)) + 1\right), \quad \alpha = 2.0
+```
 
 A subtree $n$ is pruned from the document extraction tree if:
-$$\text{Prune}(n) = \begin{cases} \text{True} & \text{if } \psi(n) < \theta_{\text{DOM}} \;\lor\; \delta(n) > 0.50 \\ \text{False} & \text{otherwise} \end{cases}$$
+
+```math
+\text{Prune}(n) = \begin{cases} \text{True} & \text{if } \psi(n) < \theta_{\text{DOM}} \;\lor\; \delta(n) > 0.50 \\ \text{False} & \text{otherwise} \end{cases}
+```
 
 #### C. Cascade Extraction Fallback Decision Rule
-Given an ordered set of extraction strategies $\mathcal{S} = \{S_1: \text{Trafilatura}, \; S_2: \text{Crawl4AI Markdown}, \; S_3: \text{Direct HTTP}, \; S_4: \text{Semantic DOM}\}$, the extracted document text $T^*$ is resolved deterministically by evaluating the length validity predicate:
-$$T^* = S_k(\text{URL}) \quad \text{where } k = \min \left\{ i \in \{1, 2, 3, 4\} \;\middle|\; \text{len}\left(S_i(\text{URL})\right) \ge 250 \right\}$$
+Given an ordered set of extraction strategies $`\mathcal{S} = \{S_1: \text{Trafilatura}, \; S_2: \text{Crawl4AI Markdown}, \; S_3: \text{Direct HTTP}, \; S_4: \text{Semantic DOM}\}`$, the extracted document text $`T^*`$ is resolved deterministically by evaluating the length validity predicate:
+
+```math
+T^* = S_k(\text{URL}) \quad \text{where } k = \min \left\{ i \in \{1, 2, 3, 4\} \;\middle|\; \text{len}\left(S_i(\text{URL})\right) \ge 250 \right\}
+```
 
 ---
 
@@ -674,49 +689,79 @@ $$T^* = S_k(\text{URL}) \quad \text{where } k = \min \left\{ i \in \{1, 2, 3, 4\
 Stage 3 resolves the linguistic identity of the source text, repairs script encoding artifacts, and executes the dynamic pipeline routing fork.
 
 #### A. FastText / IndicLID Hierarchical Softmax & $n$-gram Feature Hashing
-Given a text character sequence $x$, the feature extractor computes character and subword $n$-grams $N_x = \{g_1, g_2, \dots, g_K\}$. The continuous text representation $\mathbf{x} \in \mathbb{R}^d$ is the average of hashed embeddings:
-$$\mathbf{x} = \frac{1}{|N_x|} \sum_{g \in N_x} \mathbf{v}_g$$
+Given a text character sequence $x$, the feature extractor computes character and subword $n$-grams $`N_x = \{g_1, g_2, \dots, g_K\}`$. The continuous text representation $`\mathbf{x} \in \mathbb{R}^d`$ is the average of hashed embeddings:
 
-To classify across Indic languages and scripts efficiently without evaluating a full flat softmax over huge vocabularies, IndicLID utilizes a **Hierarchical Softmax Tree**. The probability of predicting language label $l$ along binary tree path $(n_1, n_2, \dots, n_d)$ is:
-$$P(l \mid x) = \prod_{j=1}^{d(l)} \sigma\left( \text{sgn}\left(\text{child}(n_j) == \text{left}\right) \cdot \mathbf{w}_j^T \mathbf{x} \right)$$
-where $\mathbf{w}_j \in \mathbb{R}^d$ is the hyper-plane parameter vector at internal node $n_j$, and $\sigma(z) = \frac{1}{1 + \exp(-z)}$.
+```math
+\mathbf{x} = \frac{1}{|N_x|} \sum_{g \in N_x} \mathbf{v}_g
+```
+
+To classify across Indic languages and scripts efficiently without evaluating a full flat softmax over huge vocabularies, IndicLID utilizes a **Hierarchical Softmax Tree**. The probability of predicting language label $l$ along binary tree path $`(n_1, n_2, \dots, n_d)`$ is:
+
+```math
+P(l \mid x) = \prod_{j=1}^{d(l)} \sigma\left( \text{sgn}\left(\text{child}(n_j) == \text{left}\right) \cdot \mathbf{w}_j^T \mathbf{x} \right)
+```
+where $`\mathbf{w}_j \in \mathbb{R}^d`$ is the hyper-plane parameter vector at internal node $`n_j`$, and $`\sigma(z) = \frac{1}{1 + \exp(-z)}`$.
 
 #### B. Indic Unicode Canonical Decomposition & Normalization
-Indic scripts feature reordered dependent vowels (Matras), Halants (Virama), and combining characters. The normalization mapping $f_{\text{IndicNFC}}(T)$ applies Unicode Canonical Decomposition ($\mathcal{D}$) followed by Canonical Composition ($\mathcal{C}$) and native matra reordering $\mathcal{M}$:
-$$T_{\text{norm}} = \mathcal{M}\left( \mathcal{C}\left( \mathcal{D}(T) \right) \right)$$
+Indic scripts feature reordered dependent vowels (Matras), Halants (Virama), and combining characters. The normalization mapping $`f_{\text{IndicNFC}}(T)`$ applies Unicode Canonical Decomposition ($`\mathcal{D}`$) followed by Canonical Composition ($`\mathcal{C}`$) and native matra reordering $`\mathcal{M}`$:
+
+```math
+T_{\text{norm}} = \mathcal{M}\left( \mathcal{C}\left( \mathcal{D}(T) \right) \right)
+```
 ensuring that divergent binary codepoint sequences representing identical graphemes map into a single equivalence class.
 
 #### C. Post-Identification Dynamic Routing Decision Rule
-Let $\mathcal{L}_{\text{all}}$ denote the 22 Scheduled Indian languages. The pipeline partitions $\mathcal{L}_{\text{all}}$ into high/normal-resource $\mathcal{L}_{\text{normal}}$ and low-resource $\mathcal{L}_{\text{low}}$ tiers:
-$$\mathcal{L}_{\text{low}} = \{\text{brx}, \text{doi}, \text{kas}, \text{kok}, \text{mai}, \text{mni}, \text{san}, \text{sat}, \text{snd}\}$$
+Let $`\mathcal{L}_{\text{all}}`$ denote the 22 Scheduled Indian languages. The pipeline partitions $`\mathcal{L}_{\text{all}}`$ into high/normal-resource $`\mathcal{L}_{\text{normal}}`$ and low-resource $`\mathcal{L}_{\text{low}}`$ tiers:
 
-The Boolean pivot routing indicator $\mathbb{I}_{\text{pivot}}$ evaluates:
-$$\mathbb{I}_{\text{pivot}} = \begin{cases} 1 & \text{if } l^* \in \mathcal{L}_{\text{low}} \quad (\text{Direct to Part 2: English Pivot Pipeline}) \\ 0 & \text{if } l^* \in \mathcal{L}_{\text{normal}} \quad (\text{Direct to Part 1: Direct Native Pipeline}) \end{cases}$$
+```math
+\mathcal{L}_{\text{low}} = \{\text{brx}, \text{doi}, \text{kas}, \text{kok}, \text{mai}, \text{mni}, \text{san}, \text{sat}, \text{snd}\}
+```
+
+The Boolean pivot routing indicator $`\mathbb{I}_{\text{pivot}}`$ evaluates:
+
+```math
+\mathbb{I}_{\text{pivot}} = \begin{cases} 1 & \text{if } l^* \in \mathcal{L}_{\text{low}} \quad (\text{Direct to Part 2: English Pivot Pipeline}) \\ 0 & \text{if } l^* \in \mathcal{L}_{\text{normal}} \quad (\text{Direct to Part 1: Direct Native Pipeline}) \end{cases}
+```
 
 ---
 
 ### Stage 3b: Pivot Translation to English (Low-Resource Pipeline - Sarvam-Translate)
 
-When $\mathbb{I}_{\text{pivot}} = 1$, low-resource text is translated into English to unlock maximum downstream embedding and LLM accuracy.
+When $`\mathbb{I}_{\text{pivot}} = 1`$, low-resource text is translated into English to unlock maximum downstream embedding and LLM accuracy.
 
 #### A. Conditional Cross-Attention Autoregressive Factorization
-Given low-resource source tokens $\mathbf{S} = (s_1, \dots, s_M)$ and target English tokens $\mathbf{E} = (e_1, \dots, e_N)$, the translation model computes:
-$$P(\mathbf{E} \mid \mathbf{S}) = \prod_{t=1}^N P_\theta(e_t \mid e_{<t}, \mathbf{S}) = \prod_{t=1}^N \text{softmax}\left( \mathbf{W}_v \mathbf{h}_t^{\text{dec}} \right)_{e_t}$$
+Given low-resource source tokens $`\mathbf{S} = (s_1, \dots, s_M)`$ and target English tokens $`\mathbf{E} = (e_1, \dots, e_N)`$, the translation model computes:
 
-The decoder hidden state $\mathbf{h}_t^{\text{dec}}$ attends to the encoder token representations $\mathbf{H}_{\mathbf{S}}$ via multi-head cross-attention:
-$$\text{CrossAttention}(Q^{\text{dec}}, K^{\text{enc}}, V^{\text{enc}}) = \text{softmax}\left(\frac{Q^{\text{dec}} (K^{\text{enc}})^T}{\sqrt{d_k}}\right) V^{\text{enc}}$$
+```math
+P(\mathbf{E} \mid \mathbf{S}) = \prod_{t=1}^N P_\theta(e_t \mid e_{<t>, \mathbf{S}) = \prod_{t=1}^N \text{softmax}\left( \mathbf{W}_v \mathbf{h}_t^{\text{dec}} \right)_{e_t}
+```
+
+The decoder hidden state $`\mathbf{h}_t^{\text{dec}}`$ attends to the encoder token representations $`\mathbf{H}_{\mathbf{S}}`$ via multi-head cross-attention:
+
+```math
+\text{CrossAttention}(Q^{\text{dec}}, K^{\text{enc}}, V^{\text{enc}}) = \text{softmax}\left(\frac{Q^{\text{dec}} (K^{\text{enc}})^T}{\sqrt{d_k}}\right) V^{\text{enc}}
+```
 
 #### B. 4-Bit NormalFloat (NF4) Quantization & Dynamic Dequantization
-To host the translation model within consumer GPU memory (3.4 GB footprint), weights $W$ are quantized using the information-theoretically optimal 4-bit NormalFloat distribution $\mathcal{Q}_{\text{NF4}} = \{q_1, q_2, \dots, q_{16}\}$ derived from the quantiles of $\mathcal{N}(0, 1)$:
-$$q_i = \frac{1}{2} \left( Q_X\left(\frac{2i - 1}{32}\right) + Q_X\left(\frac{2i + 1}{32}\right) \right)$$
-where $Q_X(p)$ is the probit function of the standard normal distribution.
+To host the translation model within consumer GPU memory (3.4 GB footprint), weights $W$ are quantized using the information-theoretically optimal 4-bit NormalFloat distribution $`\mathcal{Q}_{\text{NF4}} = \{q_1, q_2, \dots, q_{16}\}`$ derived from the quantiles of $`\mathcal{N}(0, 1)`$:
 
-For weight tensor block $B$ with block-wise scaling factor $\gamma = \max_{w \in B} |w|$, the quantized 4-bit index $c_w$ and reconstructed weight $\hat{w}$ are:
-$$c_w = \operatorname*{argmin}_{k \in \{1,\dots,16\}} \left| \frac{w}{\gamma} - q_k \right|, \quad \hat{w} = \gamma \cdot q_{c_w}$$
+```math
+q_i = \frac{1}{2} \left( Q_X\left(\frac{2i - 1}{32}\right) + Q_X\left(\frac{2i + 1}{32}\right) \right)
+```
+where $`Q_X(p)`$ is the probit function of the standard normal distribution.
+
+For weight tensor block $B$ with block-wise scaling factor $`\gamma = \max_{w \in B} |w|`$, the quantized 4-bit index $`c_w`$ and reconstructed weight $`\hat{w}`$ are:
+
+```math
+c_w = \operatorname*{argmin}_{k \in \{1,\dots,16\}} \left| \frac{w}{\gamma} - q_k \right|, \quad \hat{w} = \gamma \cdot q_{c_w}
+```
 
 #### C. Context Window Bounded Partitioning Constraint
 To eliminate attention saturation and sequence truncation, source text $T$ is partitioned into bounded segments:
-$$\mathcal{P}(T) = \{C_1, C_2, \dots, C_K\} \quad \text{subject to } \text{len}(C_k) \le 500, \quad \text{boundary}(C_k) \in \{\text{'\textbackslash n'}, \text{'.' }, \text{'।'}\}$$
+
+```math
+\mathcal{P}(T) = \{C_1, C_2, \dots, C_K\} \quad \text{subject to } \text{len}(C_k) \le 500, \quad \text{boundary}(C_k) \in \{\text{'\textbackslash n'}, \text{'.' }, \text{'।'}\}
+```
 
 ---
 
@@ -725,16 +770,25 @@ $$\mathcal{P}(T) = \{C_1, C_2, \dots, C_K\} \quad \text{subject to } \text{len}(
 Stage 4 cleans, homogenizes, and restores punctuation and grammar in the text before chunking.
 
 #### A. IndicXlit Sequence Transduction for Script Homogenization
-When Romanized words (e.g., acronyms, names $w_{\text{roman}}$) are detected in native Indic prose, IndicXlit models character transduction using a sequence-to-sequence beam search:
-$$\hat{w}_{\text{native}} = \operatorname*{argmax}_{w \in \Sigma_{\text{native}}^*} P(w \mid w_{\text{roman}}) = \operatorname*{argmax}_{c_{1:L}} \prod_{j=1}^L P(c_j \mid c_{<j}, w_{\text{roman}}; \theta_{\text{xlit}})$$
+When Romanized words (e.g., acronyms, names $`w_{\text{roman}}`$) are detected in native Indic prose, IndicXlit models character transduction using a sequence-to-sequence beam search:
+
+```math
+\hat{w}_{\text{native}} = \operatorname*{argmax}_{w \in \Sigma_{\text{native}}^*} P(w \mid w_{\text{roman}}) = \operatorname*{argmax}_{c_{1:L}} \prod_{j=1}^L P(c_j \mid c_{<j}, w_{\text{roman}}; \theta_{\text{xlit}})
+```
 
 #### B. Zero-Shot LLM Autoregressive Text Smoothing Objective (Qwen3-1.7B)
-The refinement model (executing in an isolated subprocess) minimizes the negative log-likelihood of restoring clean syntax, punctuation (e.g., Devanagari Danda `।`), and OCR typos conditioned on instructions $\mathbf{X}_{\text{instruct}}$:
-$$\mathcal{L}_{\text{refine}}(\theta) = -\sum_{t=1}^T \log P_\theta\left(x_t \mid x_{<t}, \mathbf{X}_{\text{instruct}}, \mathbf{X}_{\text{input}}\right)$$
+The refinement model (executing in an isolated subprocess) minimizes the negative log-likelihood of restoring clean syntax, punctuation (e.g., Devanagari Danda `।`), and OCR typos conditioned on instructions $`\mathbf{X}_{\text{instruct}}`$:
+
+```math
+\mathcal{L}_{\text{refine}}(\theta) = -\sum_{t=1}^T \log P_\theta\left(x_t \mid x_{<t}, \mathbf{X}_{\text{instruct}}, \mathbf{X}_{\text{input}}\right)
+```
 
 #### C. Deterministic Constrained Decoding
 To strictly prevent creative hallucinations or semantic drift during text smoothing, the decoding temperature is constrained:
-$$\hat{x}_t = \operatorname*{argmax}_{w \in \mathcal{V}} \left[ \frac{\exp(z_w / T)}{\sum_{w' \in \mathcal{V}} \exp(z_{w'} / T)} \right]_{T \to 0^+} = \operatorname*{argmax}_{w \in \mathcal{V}} z_w$$
+
+```math
+\hat{x}_t = \operatorname*{argmax}_{w \in \mathcal{V}} \left[ \frac{\exp(z_w / T)}{\sum_{w' \in \mathcal{V}} \exp(z_{w'} / T)} \right]_{T \to 0^+} = \operatorname*{argmax}_{w \in \mathcal{V}} z_w
+```
 
 ---
 
@@ -743,38 +797,67 @@ $$\hat{x}_t = \operatorname*{argmax}_{w \in \mathcal{V}} \left[ \frac{\exp(z_w /
 Stage 5 identifies authentic sentence boundaries, evaluates topic shift distances, and embeds text into continuous and sparse vector spaces.
 
 #### A. Neural Sentence Boundary Probability (SaT-3L-SM Token Classification)
-Given input character/subword tokens $\mathbf{X} = (x_1, x_2, \dots, x_N)$, a 3-layer Transformer encoder computes contextual representations:
-$$\mathbf{h}_i = \text{TransformerEncoder}(x_i \mid \mathbf{X}) \in \mathbb{R}^{d_{\text{model}}}$$
+Given input character/subword tokens $`\mathbf{X} = (x_1, x_2, \dots, x_N)`$, a 3-layer Transformer encoder computes contextual representations:
 
-The probability that token $x_i$ constitutes a true sentence boundary $y_i = 1$ is parameterized via a sigmoid head:
-$$P(y_i = 1 \mid \mathbf{X}) = \sigma(\mathbf{w}_s^T \mathbf{h}_i + b_s) = \frac{1}{1 + \exp\left(-(\mathbf{w}_s^T \mathbf{h}_i + b_s)\right)}$$
-A boundary is emitted if $P(y_i = 1 \mid \mathbf{X}) \ge \theta_{\text{boundary}} = 0.50$.
+```math
+\mathbf{h}_i = \text{TransformerEncoder}(x_i \mid \mathbf{X}) \in \mathbb{R}^{d_{\text{model}}}
+```
+
+The probability that token $`x_i`$ constitutes a true sentence boundary $`y_i = 1`$ is parameterized via a sigmoid head:
+
+```math
+P(y_i = 1 \mid \mathbf{X}) = \sigma(\mathbf{w}_s^T \mathbf{h}_i + b_s) = \frac{1}{1 + \exp\left(-(\mathbf{w}_s^T \mathbf{h}_i + b_s)\right)}
+```
+A boundary is emitted if $`P(y_i = 1 \mid \mathbf{X}) \ge \theta_{\text{boundary}} = 0.50`$.
 
 #### B. Adjacent Sentence Semantic Cosine Similarity
-Let $(s_1, s_2, \dots, s_M)$ be the segmented sentences. Their dense vector embeddings are:
-$$\mathbf{v}_i = \text{BGE-M3}(s_i) \in \mathbb{R}^{1024}, \quad \|\mathbf{v}_i\|_2 = 1$$
+Let $`(s_1, s_2, \dots, s_M)`$ be the segmented sentences. Their dense vector embeddings are:
 
-The semantic similarity between consecutive sentences $s_i$ and $s_{i+1}$ is computed via the Cosine Inner Product:
-$$\text{Sim}(s_i, s_{i+1}) = \cos(\mathbf{v}_i, \mathbf{v}_{i+1}) = \frac{\mathbf{v}_i \cdot \mathbf{v}_{i+1}}{\|\mathbf{v}_i\|_2 \|\mathbf{v}_{i+1}\|_2} = \sum_{k=1}^{1024} v_{i,k} \cdot v_{i+1,k}$$
+```math
+\mathbf{v}_i = \text{BGE-M3}(s_i) \in \mathbb{R}^{1024}, \quad \|\mathbf{v}_i\|_2 = 1
+```
+
+The semantic similarity between consecutive sentences $`s_i`$ and $`s_{i+1}`$ is computed via the Cosine Inner Product:
+
+```math
+\text{Sim}(s_i, s_{i+1}) = \cos(\mathbf{v}_i, \mathbf{v}_{i+1}) = \frac{\mathbf{v}_i \cdot \mathbf{v}_{i+1}}{\|\mathbf{v}_i\|_2 \|\mathbf{v}_{i+1}\|_2} = \sum_{k=1}^{1024} v_{i,k} \cdot v_{i+1,k}
+```
 
 #### C. Semantic Distance Discontinuity & Dynamic 95th Percentile Breakpoint Rule
-The semantic discontinuity (topic shift distance) $\Delta_i$ at boundary $i$ is:
-$$\Delta_i = 1 - \text{Sim}(s_i, s_{i+1}) \in [0, 2]$$
+The semantic discontinuity (topic shift distance) $`\Delta_i`$ at boundary $`i`$ is:
+
+```math
+\Delta_i = 1 - \text{Sim}(s_i, s_{i+1}) \in [0, 2]
+```
 
 Rather than applying a brittle static threshold, BharatSaar computes an adaptive breakpoint from the empirical distribution across the document:
-$$\mathbf{\Delta} = \{\Delta_1, \Delta_2, \dots, \Delta_{M-1}\}$$
-$$\tau_{95} = \text{Percentile}_{95}(\mathbf{\Delta})$$
 
-A semantic chunk split is created at boundary $i$ if and only if:
-$$\mathbb{I}_{\text{split}}(i) = \begin{cases} 1 & \text{if } \Delta_i \ge \tau_{95} \\ 0 & \text{if } \Delta_i < \tau_{95} \end{cases}$$
+```math
+\mathbf{\Delta} = \{\Delta_1, \Delta_2, \dots, \Delta_{M-1}\}
+```
+```math
+\tau_{95} = \text{Percentile}_{95}(\mathbf{\Delta})
+```
+
+A semantic chunk split is created at boundary $`i`$ if and only if:
+
+```math
+\mathbb{I}_{\text{split}}(i) = \begin{cases} 1 & \text{if } \Delta_i \ge \tau_{95} \\ 0 & \text{if } \Delta_i < \tau_{95} \end{cases}
+```
 
 #### D. BGE-M3 Dense Semantic Hypersphere Projection
-For each chunk $C = (t_1, t_2, \dots, t_L)$, contextual token vectors $\mathbf{h}_i \in \mathbb{R}^{1024}$ are mean-pooled and projected onto the unit hypersphere:
-$$\mathbf{e}_{\text{dense}} = \frac{\frac{1}{L} \sum_{i=1}^L \mathbf{h}_i}{\left\| \frac{1}{L} \sum_{i=1}^L \mathbf{h}_i \right\|_2} \in \mathbb{R}^{1024}, \quad \|\mathbf{e}_{\text{dense}}\|_2 = 1$$
+For each chunk $`C = (t_1, t_2, \dots, t_L)`$, contextual token vectors $`\mathbf{h}_i \in \mathbb{R}^{1024}`$ are mean-pooled and projected onto the unit hypersphere:
+
+```math
+\mathbf{e}_{\text{dense}} = \frac{\frac{1}{L} \sum_{i=1}^L \mathbf{h}_i}{\left\| \frac{1}{L} \sum_{i=1}^L \mathbf{h}_i \right\|_2} \in \mathbb{R}^{1024}, \quad \|\mathbf{e}_{\text{dense}}\|_2 = 1
+```
 
 #### E. BGE-M3 Lexical Sparse Weighting Formulation
-To capture exact Named Entity mentions and low-resource morphology, BGE-M3 computes a scalar lexical importance $w_t$ for each vocabulary token $t$:
-$$w_t = \log\left(1 + \text{ReLU}\left(\mathbf{W}_{\text{sparse}} \mathbf{h}_t + b_{\text{sparse}}\right)\right)$$
+To capture exact Named Entity mentions and low-resource morphology, BGE-M3 computes a scalar lexical importance $`w_t`$ for each vocabulary token $`t`$:
+
+```math
+w_t = \log\left(1 + \text{ReLU}\left(\mathbf{W}_{\text{sparse}} \mathbf{h}_t + b_{\text{sparse}}\right)\right)
+```
 
 ---
 
@@ -783,28 +866,48 @@ $$w_t = \log\left(1 + \text{ReLU}\left(\mathbf{W}_{\text{sparse}} \mathbf{h}_t +
 Stage 6 extracts salient keywords, models overarching narrative themes, and prunes duplicate reported news events.
 
 #### A. KeyBERT Relevance & Maximal Marginal Relevance (MMR)
-Let $\mathbf{e}_D$ be the embedding of the document text and $\mathbf{e}_{c_i}$ be the embedding of candidate $n$-gram $c_i \in C$:
-$$\text{Rel}(c_i, D) = \cos(\mathbf{e}_{c_i}, \mathbf{e}_D) = \frac{\mathbf{e}_{c_i} \cdot \mathbf{e}_D}{\|\mathbf{e}_{c_i}\|_2 \|\mathbf{e}_D\|_2}$$
+Let $`\mathbf{e}_D`$ be the embedding of the document text and $`\mathbf{e}_{c_i}`$ be the embedding of candidate $n$-gram $`c_i \in C`$:
+
+```math
+\text{Rel}(c_i, D) = \cos(\mathbf{e}_{c_i}, \mathbf{e}_D) = \frac{\mathbf{e}_{c_i} \cdot \mathbf{e}_D}{\|\mathbf{e}_{c_i}\|_2 \|\mathbf{e}_D\|_2}
+```
 
 To prevent extracted keywords from collapsing into repetitive synonyms, keywords are selected greedily via MMR:
-$$c^* = \operatorname*{argmax}_{c_i \in C \setminus S} \left[ \lambda \cos(\mathbf{e}_{c_i}, \mathbf{e}_D) - (1 - \lambda) \max_{c_j \in S} \cos(\mathbf{e}_{c_i}, \mathbf{e}_{c_j}) \right]$$
-where $S$ is the set of already selected keywords, $C \setminus S$ is the candidate pool, and $\lambda = 0.65$.
+
+```math
+c^* = \operatorname*{argmax}_{c_i \in C \setminus S} \left[ \lambda \cos(\mathbf{e}_{c_i}, \mathbf{e}_D) - (1 - \lambda) \max_{c_j \in S} \cos(\mathbf{e}_{c_i}, \mathbf{e}_{c_j}) \right]
+```
+where $S$ is the set of already selected keywords, $C \setminus S$ is the candidate pool, and $`\lambda = 0.65`$.
 
 #### B. BERTopic Class-based TF-IDF (c-TF-IDF)
 For term $t$ in topic cluster $c$:
-$$W_{t, c} = \text{tf}_{t, c} \cdot \log\left( 1 + \frac{A}{f_t} \right)$$
-where $\text{tf}_{t, c}$ is the frequency of term $t$ in cluster $c$, $f_t$ is the global frequency of term $t$ across all clusters, and $A$ is the average word count per cluster.
+
+```math
+W_{t, c} = \text{tf}_{t, c} \cdot \log\left( 1 + \frac{A}{f_t} \right)
+```
+where $`\text{tf}_{t, c}`$ is the frequency of term $t$ in cluster $c$, $`f_t`$ is the global frequency of term $t$ across all clusters, and $A$ is the average word count per cluster.
 
 #### C. BGE-Reranker-v2-m3 Pairwise Cross-Attention Event Deduplication
 When multiple paragraphs report the same event with different vocabulary, [BGE-Reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3) evaluates joint cross-attention across candidate event pairs $(E_A, E_B)$:
-$$\mathbf{z} = \text{"[CLS] "} \circ E_A \circ \text{" [SEP] "} \circ E_B \circ \text{" [SEP]"}$$
-$$\mathbf{H}_{\mathbf{z}} = \text{CrossEncoderTransformer}(\mathbf{z}) \in \mathbb{R}^{L \times d}$$
+
+```math
+\mathbf{z} = \text{"[CLS] "} \circ E_A \circ \text{" [SEP] "} \circ E_B \circ \text{" [SEP]"}
+```
+```math
+\mathbf{H}_{\mathbf{z}} = \text{CrossEncoderTransformer}(\mathbf{z}) \in \mathbb{R}^{L \times d}
+```
 
 The pairwise similarity score is computed from the pooled $[CLS]$ token representation:
-$$s(E_A, E_B) = \mathbf{w}_{\text{cls}}^T \mathbf{h}_{[CLS]} + b_{\text{cls}}$$
+
+```math
+s(E_A, E_B) = \mathbf{w}_{\text{cls}}^T \mathbf{h}_{[CLS]} + b_{\text{cls}}
+```
 
 An event $E_B$ is classified as a redundant duplicate of $E_A$ and pruned if:
-$$\text{IsDuplicate}(E_A, E_B) = \begin{cases} \text{True} & \text{if } s(E_A, E_B) > 1.0 \\ \text{False} & \text{if } s(E_A, E_B) \le 1.0 \end{cases}$$
+
+```math
+\text{IsDuplicate}(E_A, E_B) = \begin{cases} \text{True} & \text{if } s(E_A, E_B) > 1.0 \\ \text{False} & \text{if } s(E_A, E_B) \le 1.0 \end{cases}
+```
 
 ---
 
@@ -813,40 +916,64 @@ $$\text{IsDuplicate}(E_A, E_B) = \begin{cases} \text{True} & \text{if } s(E_A, E
 Stage 7 retrieves the most salient chunks from vector storage and synthesizes a non-hallucinated summary.
 
 #### A. ChromaDB HNSW Vector Space Cosine Distance Metric
-The query vector $\mathbf{q} \in \mathbb{R}^{1024}$ is constructed by embedding the union of top extracted keywords: $\mathbf{q} = \text{BGE-M3}(\bigcup_{k=1}^5 \text{keyword}_k)$. Distance to candidate chunk vectors $\mathbf{k}_j$ is evaluated via HNSW graphs:
-$$\mathcal{D}_{\text{HNSW}}(\mathbf{q}, \mathbf{k}_j) = 1 - \frac{\mathbf{q} \cdot \mathbf{k}_j}{\|\mathbf{q}\|_2 \|\mathbf{k}_j\|_2}$$
+The query vector $`\mathbf{q} \in \mathbb{R}^{1024}`$ is constructed by embedding the union of top extracted keywords: $`\mathbf{q} = \text{BGE-M3}(\bigcup_{k=1}^5 \text{keyword}_k)`$. Distance to candidate chunk vectors $`\mathbf{k}_j`$ is evaluated via HNSW graphs:
 
-#### B. Multi-Tenant Scoped ArgTop-$K$ Optimization Objective
+```math
+\mathcal{D}_{\text{HNSW}}(\mathbf{q}, \mathbf{k}_j) = 1 - \frac{\mathbf{q} \cdot \mathbf{k}_j}{\|\mathbf{q}\|_2 \|\mathbf{k}_j\|_2}
+```
+
+#### B. Multi-Tenant Scoped ArgTop-K Optimization Objective
 To prevent cross-document contamination in concurrent environments, retrieval is partitioned strictly by metadata:
-$$\mathcal{K}^* = \operatorname*{arg\,top\,12}_{j \in \{1, \dots, N\} \atop \text{user\_id}(j) = u \;\land\; \text{doc\_id}(j) = d} \left( 1.0 - \mathcal{D}_{\text{HNSW}}(\mathbf{q}, \mathbf{k}_j) \right)$$
+
+```math
+\mathcal{K}^* = \operatorname*{arg\,top\,12}_{j \in \{1, \dots, N\} \atop \text{user\_id}(j) = u \;\land\; \text{doc\_id}(j) = d} \left( 1.0 - \mathcal{D}_{\text{HNSW}}(\mathbf{q}, \mathbf{k}_j) \right)
+```
 
 #### C. Scaled Dot-Product Multi-Head Causal Self-Attention (Qwen3-4B)
-Given queries $Q$, keys $K$, and values $V$ with head dimension $d_k$:
-$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^T}{\sqrt{d_k}} + \mathbf{M}_{\text{causal}}\right) V$$
-where the causal autoregressive mask $\mathbf{M}_{\text{causal}}$ enforces temporal dependency:
-$$\mathbf{M}_{\text{causal}}(i, j) = \begin{cases} 0 & \text{if } j \le i \\ -\infty & \text{if } j > i \end{cases}$$
+Given queries $Q$, keys $K$, and values $V$ with head dimension $`d_k`$:
+
+```math
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^T}{\sqrt{d_k}} + \mathbf{M}_{\text{causal}}\right) V
+```
+where the causal autoregressive mask $`\mathbf{M}_{\text{causal}}`$ enforces temporal dependency:
+
+```math
+\mathbf{M}_{\text{causal}}(i, j) = \begin{cases} 0 & \text{if } j \le i \\ -\infty & \text{if } j > i \end{cases}
+```
 
 #### D. Autoregressive Causal Likelihood & Controlled Nucleus Sampling
 Summary token generation minimizes autoregressive causal cross-entropy:
-$$\mathcal{L}_{\text{CLM}}(\theta) = -\sum_{t=1}^T \log P_\theta(y_t \mid y_{<t}, \mathbf{X}_{\text{context}})$$
 
-Tokens are sampled from the dynamically truncated nucleus subset $\mathcal{V}^{(p)}$:
-$$P(y_t = w) = \begin{cases} \frac{\exp(z_w / T)}{\sum_{w' \in \mathcal{V}^{(p)}} \exp(z_{w'} / T)} & \text{if } w \in \mathcal{V}^{(p)} \\ 0 & \text{otherwise} \end{cases}$$
-where $\mathcal{V}^{(p)}$ is the smallest subset satisfying $\sum_{w \in \mathcal{V}^{(p)}} P(w) \ge p$, with hyper-parameters tuned for factuality: $p = 0.90, T = 0.01$.
+```math
+\mathcal{L}_{\text{CLM}}(\theta) = -\sum_{t=1}^T \log P_\theta(y_t \mid y_{<t}, \mathbf{X}_{\text{context}})
+```
+
+Tokens are sampled from the dynamically truncated nucleus subset $`\mathcal{V}^{(p)}`$:
+
+```math
+P(y_t = w) = \begin{cases} \frac{\exp(z_w / T)}{\sum_{w' \in \mathcal{V}^{(p)}} \exp(z_{w'} / T)} & \text{if } w \in \mathcal{V}^{(p)} \\ 0 & \text{otherwise} \end{cases}
+```
+where $`\mathcal{V}^{(p)}`$ is the smallest subset satisfying $`\sum_{w \in \mathcal{V}^{(p)}} P(w) \ge p`$, with hyper-parameters tuned for factuality: $p = 0.90, T = 0.01$.
 
 ---
 
 ### Stage 7b: Native Back-Translation Engine (Low-Resource Pipeline - Sarvam-Translate)
 
-When $\mathbb{I}_{\text{pivot}} = 1$, the pristine English intelligence payload is translated back into the original regional language script.
+When $`\mathbb{I}_{\text{pivot}} = 1`$, the pristine English intelligence payload is translated back into the original regional language script.
 
 #### A. Inverse Conditional Neural Translation Factorization
-Given the generated English summary sequence $\mathbf{E}_{\text{summary}} = (e_1, \dots, e_M)$ and native target tokens $\mathbf{S}_{\text{native}} = (s_1, \dots, s_N)$:
-$$P(\mathbf{S}_{\text{native}} \mid \mathbf{E}_{\text{summary}}) = \prod_{j=1}^N P_{\theta_{\text{sarvam}}}(s_j \mid s_{<j}, \mathbf{E}_{\text{summary}})$$
+Given the generated English summary sequence $`\mathbf{E}_{\text{summary}} = (e_1, \dots, e_M)`$ and native target tokens $`\mathbf{S}_{\text{native}} = (s_1, \dots, s_N)`$:
+
+```math
+P(\mathbf{S}_{\text{native}} \mid \mathbf{E}_{\text{summary}}) = \prod_{j=1}^N P_{\theta_{\text{sarvam}}}(s_j \mid s_{<j}, \mathbf{E}_{\text{summary}})
+```
 
 #### B. Multi-Field Structured Payload Batch Factorization
-For the structured output vector $\mathbf{Y}_{\text{en}} = [ \text{Headline}_{\text{en}}, \text{Summary}_{\text{en}}, \text{Bullets}_{\text{en}}, \text{Keywords}_{\text{en}} ]^T$, each field is back-translated independently to preserve exact schema typology:
-$$\mathbf{Y}_{\text{native}}^{(k)} = \operatorname*{argmax}_{\mathbf{S}} P\left(\mathbf{S} \mid \mathbf{Y}_{\text{en}}^{(k)}; \theta_{\text{sarvam}}\right), \quad \forall k \in \{1, 2, 3, 4\}$$
+For the structured output vector $`\mathbf{Y}_{\text{en}} = [ \text{Headline}_{\text{en}}, \text{Summary}_{\text{en}}, \text{Bullets}_{\text{en}}, \text{Keywords}_{\text{en}} ]^T`$, each field is back-translated independently to preserve exact schema typology:
+
+```math
+\mathbf{Y}_{\text{native}}^{(k)} = \operatorname*{argmax}_{\mathbf{S}} P\left(\mathbf{S} \mid \mathbf{Y}_{\text{en}}^{(k)}; \theta_{\text{sarvam}}\right), \quad \forall k \in \{1, 2, 3, 4\}
+```
 ensuring complete preservation of native grammar, orthography, and script conventions.
 
 ---
@@ -856,28 +983,47 @@ ensuring complete preservation of native grammar, orthography, and script conven
 Stage 8 commits the finalized native payload to persistent storage and evaluates summary fidelity.
 
 #### A. Finite State Transition & Atomic Document Commit
-Let $\mathcal{S}_t$ denote the job state in MongoDB. The atomic commit transition is defined as:
-$$\mathcal{S}_{t+1} = \delta(\mathcal{S}_t, \mathbf{Y}_{\text{native}}), \quad \text{where } \text{status} \leftarrow \text{"COMPLETED"}, \quad \Delta t_{\text{latency}} = t_{\text{commit}} - t_{\text{submit}}$$
+Let $`\mathcal{S}_t`$ denote the job state in MongoDB. The atomic commit transition is defined as:
+
+```math
+\mathcal{S}_{t+1} = \delta(\mathcal{S}_t, \mathbf{Y}_{\text{native}}), \quad \text{where } \text{status} \leftarrow \text{"COMPLETED"}, \quad \Delta t_{\text{latency}} = t_{\text{commit}} - t_{\text{submit}}
+```
 
 #### B. Comprehensive Summarization Evaluation Formulations
 To mathematically validate summary accuracy against reference gold standards, BharatSaar evaluates four primary NLP metrics:
 
-##### 1. ROUGE-$N$ (Overlapping $n$-grams)
-$$\text{ROUGE-}N = \frac{\sum_{S \in \{\text{Reference}\}} \sum_{n\text{-gram} \in S} \text{Count}_{\text{match}}(n\text{-gram})}{\sum_{S \in \{\text{Reference}\}} \sum_{n\text{-gram} \in S} \text{Count}(n\text{-gram})}$$
+##### 1. ROUGE-N (Overlapping n-grams)
+
+```math
+\text{ROUGE-}N = \frac{\sum_{S \in \{\text{Reference}\}} \sum_{n\text{-gram} \in S} \text{Count}_{\text{match}}(n\text{-gram})}{\sum_{S \in \{\text{Reference}\}} \sum_{n\text{-gram} \in S} \text{Count}(n\text{-gram})}
+```
 
 ##### 2. ROUGE-L (Longest Common Subsequence)
 Let $m$ be the length of the Reference summary and $n$ be the length of the Candidate summary. The Longest Common Subsequence (LCS) precision and recall are:
-$$R_{\text{LCS}} = \frac{\text{LCS}(\text{Ref}, \text{Cand})}{m}, \quad P_{\text{LCS}} = \frac{\text{LCS}(\text{Ref}, \text{Cand})}{n}$$
-$$\text{ROUGE-L} = \frac{(1 + \beta^2) R_{\text{LCS}} P_{\text{LCS}}}{R_{\text{LCS}} + \beta^2 P_{\text{LCS}}} \quad (\text{with } \beta = 1.0)$$
+
+```math
+R_{\text{LCS}} = \frac{\text{LCS}(\text{Ref}, \text{Cand})}{m}, \quad P_{\text{LCS}} = \frac{\text{LCS}(\text{Ref}, \text{Cand})}{n}
+```
+```math
+\text{ROUGE-L} = \frac{(1 + \beta^2) R_{\text{LCS}} P_{\text{LCS}}}{R_{\text{LCS}} + \beta^2 P_{\text{LCS}}} \quad (\text{with } \beta = 1.0)
+```
 
 ##### 3. BLEU Score (Bilingual Evaluation Understudy)
-$$\text{BLEU} = \text{BP} \cdot \exp\left(\sum_{n=1}^4 \frac{1}{4} \log p_n\right), \quad \text{BP} = \begin{cases} 1 & \text{if } c > r \\ \exp\left(1 - \frac{r}{c}\right) & \text{if } c \le r \end{cases}$$
-where $c$ is the candidate length, $r$ is the reference length, $p_n$ is modified $n$-gram precision, and $\text{BP}$ is the brevity penalty.
+
+```math
+\text{BLEU} = \text{BP} \cdot \exp\left(\sum_{n=1}^4 \frac{1}{4} \log p_n\right), \quad \text{BP} = \begin{cases} 1 & \text{if } c > r \\ \exp\left(1 - \frac{r}{c}\right) & \text{if } c \le r \end{cases}
+```
+where $c$ is the candidate length, $r$ is the reference length, $p_n$ is modified n-gram precision, and $\text{BP}$ is the brevity penalty.
 
 ##### 4. BERTScore (Contextual Semantic Preservation)
-For reference tokens $x$ and generated tokens $\hat{x}$ with unit embeddings $\mathbf{e}_x, \mathbf{e}_{\hat{x}}$:
-$$R_{\text{BERT}} = \frac{1}{|x|} \sum_{x_i \in x} \max_{y_j \in \hat{x}} \mathbf{e}_{x_i}^T \mathbf{e}_{y_j}, \quad P_{\text{BERT}} = \frac{1}{|\hat{x}|} \sum_{y_j \in \hat{x}} \max_{x_i \in x} \mathbf{e}_{x_i}^T \mathbf{e}_{y_j}$$
-$$F_{\text{BERT}} = 2 \cdot \frac{P_{\text{BERT}} \cdot R_{\text{BERT}}}{P_{\text{BERT}} + R_{\text{BERT}}}$$
+For reference tokens $x$ and generated tokens $`\hat{x}`$ with unit embeddings $`\mathbf{e}_x, \mathbf{e}_{\hat{x}}`$:
+
+```math
+R_{\text{BERT}} = \frac{1}{|x|} \sum_{x_i \in x} \max_{y_j \in \hat{x}} \mathbf{e}_{x_i}^T \mathbf{e}_{y_j}, \quad P_{\text{BERT}} = \frac{1}{|\hat{x}|} \sum_{y_j \in \hat{x}} \max_{x_i \in x} \mathbf{e}_{x_i}^T \mathbf{e}_{y_j}
+```
+```math
+F_{\text{BERT}} = 2 \cdot \frac{P_{\text{BERT}} \cdot R_{\text{BERT}}}{P_{\text{BERT}} + R_{\text{BERT}}}
+```
 
 ---
 
@@ -982,7 +1128,7 @@ ROUGE-L Score (%)
 
 ### 4. Semantic Chunk Breakpoint Threshold Sensitivity Curve
 
-The graph below models the relationship between the chosen Percentile Threshold $\tau_p$ and the resulting chunk count and topic boundary precision:
+The graph below models the relationship between the chosen Percentile Threshold $`\tau_p`$ and the resulting chunk count and topic boundary precision:
 
 ```
 Score / Chunks
@@ -1000,15 +1146,15 @@ Score / Chunks
                      Percentile Threshold
 ```
 
-- **$\tau < P_{75}$ (Under-chunked / Over-fragmented)**: Sentences with trivial nuance differences are split into tiny 1-sentence fragments, destroying paragraph context.
-- **$\tau = P_{95}$ (BharatSaar Setting)**: Perfect semantic grouping. Contiguous sentences describing the same sub-topic remain clustered; splits occur solely at genuine topical shifts.
-- **$\tau > P_{99}$ (Over-chunked / Under-fragmented)**: Chunks become overly large, diluting vector specificity and causing retrieval dilution.
+- **$`\tau < P_{75}`$ (Under-chunked / Over-fragmented)**: Sentences with trivial nuance differences are split into tiny 1-sentence fragments, destroying paragraph context.
+- **$`\tau = P_{95}`$ (BharatSaar Setting)**: Perfect semantic grouping. Contiguous sentences describing the same sub-topic remain clustered; splits occur solely at genuine topical shifts.
+- **$`\tau > P_{99}`$ (Over-chunked / Under-fragmented)**: Chunks become overly large, diluting vector specificity and causing retrieval dilution.
 
 ---
 
 ### 5. RAG Retrieval Density vs Hallucination Rate Curve
 
-This graph demonstrates why BharatSaar retrieves exactly **Top $K = 12$ chunks** from ChromaDB for Qwen3-4B context synthesis:
+This graph demonstrates why BharatSaar retrieves exactly **Top $`K = 12`$ chunks** from ChromaDB for Qwen3-4B context synthesis:
 
 ```
 Percentage (%)
@@ -1023,9 +1169,9 @@ Percentage (%)
                       Retrieved Chunks (K)
 ```
 
-- At **$K \le 4$**: Critical facts are omitted, forcing the LLM to hallucinate missing connections (~38% hallucination rate).
-- At **$K = 12$**: Context completeness reaches $96.4\%$, while factual hallucination drops to an empirical minimum of **$2.1\%$**, fitting cleanly within the prompt token budget.
-- At **$K \ge 20$**: Distractor chunks introduce attention dispersion, slightly degrading generation precision.
+- At **$`K \le 4`$**: Critical facts are omitted, forcing the LLM to hallucinate missing connections (~38% hallucination rate).
+- At **$`K = 12`$**: Context completeness reaches 96.4%, while factual hallucination drops to an empirical minimum of **2.1%**, fitting cleanly within the prompt token budget.
+- At **$`K \ge 20`$**: Distractor chunks introduce attention dispersion, slightly degrading generation precision.
 
 ---
 
