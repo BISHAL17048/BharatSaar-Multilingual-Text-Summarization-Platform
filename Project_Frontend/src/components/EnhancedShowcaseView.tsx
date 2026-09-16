@@ -16,6 +16,7 @@ import {
   BarChart3,
   Search,
   School,
+  Video,
 } from 'lucide-react';
 import { MermaidRenderer } from './MermaidRenderer';
 import { MathBlock } from './MathBlock';
@@ -262,6 +263,99 @@ export const EnhancedShowcaseView: React.FC<EnhancedShowcaseViewProps> = ({ onSw
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 A 3,000-word article is condensed into a 300-word summary without losing critical semantic meaning.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3B. PROJECT PRESENTATION */}
+      <section id="project-presentation" className="scroll-mt-24">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="p-2.5 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
+            <Video size={24} />
+          </div>
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Project Presentation
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+              Official video demonstrations and system architecture walkthroughs
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Video 1 */}
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md overflow-hidden flex flex-col">
+            <div className="aspect-video w-full bg-slate-950">
+              <iframe
+                src="https://www.youtube.com/embed/wqKhxgo57Ic"
+                title="BharatSaar Full Project Demonstration & Overview"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full border-0"
+              />
+            </div>
+            <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
+                  Project Presentation Demo 1
+                </span>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white mt-1.5">
+                  Full Project Demonstration & Overview
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                  End-to-end walkthrough showing real-time URL ingestion, multi-tier document parsing, Indic language detection, and RAG abstractive summarization.
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <a
+                  href="https://youtu.be/wqKhxgo57Ic?si=sdK4Q1DcZ3QtAic0"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 flex items-center gap-1.5 transition"
+                >
+                  <ExternalLink size={13} />
+                  <span>https://youtu.be/wqKhxgo57Ic</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Video 2 */}
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md overflow-hidden flex flex-col">
+            <div className="aspect-video w-full bg-slate-950">
+              <iframe
+                src="https://www.youtube.com/embed/0pyGsjMlHQE"
+                title="BharatSaar System Architecture & Technical Walkthrough"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full border-0"
+              />
+            </div>
+            <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300">
+                  Technical Walkthrough Demo 2
+                </span>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white mt-1.5">
+                  System Architecture & Technical Deep Dive
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                  Detailed architectural explanation of the VRAM-isolated GPU sandbox, Sarvam 4-bit English Pivot pipeline, and ChromaDB vector retrieval.
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <a
+                  href="https://youtu.be/0pyGsjMlHQE?si=ozLdr8IT0u_k2qSA"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1.5 transition"
+                >
+                  <ExternalLink size={13} />
+                  <span>https://youtu.be/0pyGsjMlHQE</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>

@@ -27,6 +27,15 @@ BharatSaar solves the critical problem of information overload in regional India
 
 ---
 
+## 🎬 Project Presentation
+
+Watch the comprehensive video demonstrations and technical walkthrough of BharatSaar:
+
+- **Full Project Demonstration & Overview**: [Watch on YouTube (Demo 1)](https://youtu.be/wqKhxgo57Ic?si=sdK4Q1DcZ3QtAic0) — `https://youtu.be/wqKhxgo57Ic?si=sdK4Q1DcZ3QtAic0`
+- **System Architecture & Technical Walkthrough**: [Watch on YouTube (Demo 2)](https://youtu.be/0pyGsjMlHQE?si=ozLdr8IT0u_k2qSA) — `https://youtu.be/0pyGsjMlHQE?si=ozLdr8IT0u_k2qSA`
+
+---
+
 ## 🏗️ System Architecture
 
 BharatSaar operates on a high-throughput, asynchronous microservice architecture engineered to orchestrate heavy transformer models, dense vector retrieval, and real-time state persistence without blocking the user experience.
