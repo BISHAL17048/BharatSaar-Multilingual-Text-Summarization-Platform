@@ -16,27 +16,27 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, id, tit
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
-    
+
     mermaid.initialize({
       startOnLoad: false,
       theme: 'base',
       securityLevel: 'loose',
       fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      fontSize: 12,
+      fontSize: 13,
       flowchart: {
-        useMaxWidth: true,
+        useMaxWidth: false,
         htmlLabels: true,
         curve: 'basis',
-        nodeSpacing: 25,
-        rankSpacing: 28,
-        padding: 8,
+        nodeSpacing: 40,
+        rankSpacing: 45,
+        padding: 20,
       },
       sequence: {
-        useMaxWidth: true,
+        useMaxWidth: false,
         actorFontSize: 12,
         messageFontSize: 11,
         noteFontSize: 11,
-        boxMargin: 8,
+        boxMargin: 10,
       },
       gantt: {
         useMaxWidth: true,
@@ -50,7 +50,7 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, id, tit
       },
       themeVariables: {
         darkMode: isDark,
-        fontSize: '12px',
+        fontSize: '13px',
         fontFamily: 'Inter, system-ui, sans-serif',
         background: isDark ? '#17191E' : '#f8fafc',
         primaryColor: isDark ? '#22252C' : '#FFFFFF',
@@ -72,7 +72,14 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, id, tit
       try {
         const renderId = (id ? `mermaid-${id}-` : 'mermaid-') + Math.random().toString(36).substring(2, 9) + '-' + Date.now();
         const { svg } = await mermaid.render(renderId, chart.trim());
-        setSvgContent(svg);
+
+        // Patch SVG: remove fixed width/height, let it scale via viewBox
+        const patched = svg
+          .replace(/width="[^"]*"/, 'width="100%"')
+          .replace(/height="[^"]*"/, 'height="auto"')
+          .replace(/style="[^"]*max-width[^"]*"/g, '');
+
+        setSvgContent(patched);
       } catch (err) {
         console.error('Mermaid render error for chart:', title, err);
       }
@@ -80,7 +87,6 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, id, tit
 
     renderDiagram();
 
-    // Listen for theme change observer
     const observer = new MutationObserver(() => {
       renderDiagram();
     });
@@ -89,25 +95,23 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, id, tit
     return () => observer.disconnect();
   }, [chart, title, id]);
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(chart);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  // Auto-fit zoom after SVG renders
+  useEffect(() => {
+    if (!svgContent || !containerRef.current) return;
+    // Small delay to let the DOM paint the SVG
+    const timer = setTimeout(() => {
+      autoFit();
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [svgContent]);
 
-  const handleFit = () => {
+  const autoFit = () => {
     if (!containerRef.current) return;
     const svgEl = containerRef.current.querySelector('svg');
     if (!svgEl) return;
 
-    const paddingX = 40;
-    const paddingY = 40;
+    const paddingX = 48;
     const containerW = containerRef.current.clientWidth - paddingX;
-    const containerH = (containerRef.current.clientHeight || 450) - paddingY;
 
     let svgW = 0;
     let svgH = 0;
@@ -121,16 +125,46 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, id, tit
       svgH = svgEl.scrollHeight || svgEl.clientHeight || 400;
     }
 
-    if (svgW > 0 && containerW > 0) {
-      const scaleX = containerW / svgW;
-      const scaleY = containerH > 0 && svgH > 0 ? containerH / svgH : scaleX;
-      const fitScale = Math.min(scaleX, scaleY);
-      const targetZoom = Math.max(0.35, Math.min(1.4, +fitScale.toFixed(2)));
-      setZoom((current) => (Math.abs(current - targetZoom) < 0.05 ? 1 : targetZoom));
+    if (svgW > 0 && containerW > 0 && svgW > containerW) {
+      const scale = containerW / svgW;
+      setZoom(Math.max(0.3, Math.min(1.0, +scale.toFixed(2))));
     } else {
-      setZoom((z) => (z === 1 ? 0.75 : 1));
+      setZoom(1);
+    }
+    void svgH; // suppress lint
+  };
+
+  const handleFit = () => {
+    autoFit();
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(chart);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error(e);
     }
   };
+
+  // Compute rendered SVG natural height from viewBox so container grows to fit
+  const getSvgNaturalHeight = (): number | undefined => {
+    if (!containerRef.current) return undefined;
+    const svgEl = containerRef.current.querySelector('svg');
+    if (!svgEl) return undefined;
+    const viewBox = svgEl.viewBox?.baseVal;
+    if (viewBox && viewBox.height > 0 && viewBox.width > 0) {
+      const containerW = containerRef.current.clientWidth - 48;
+      const scale = zoom < 1 ? zoom : Math.min(1, containerW / viewBox.width);
+      return viewBox.height * scale + 80;
+    }
+    return undefined;
+  };
+
+  const naturalH = getSvgNaturalHeight();
+  const canvasMinH = Math.max(200, naturalH ?? 200);
+  const canvasMaxH = Math.min(Math.max(canvasMinH, 500), 1600);
 
   return (
     <div className="my-6 rounded-xl border border-[#EAE4DC] dark:border-[#25282F] bg-white dark:bg-[#17191E] shadow-sm overflow-hidden">
@@ -143,7 +177,7 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, id, tit
 
         <div className="flex items-center space-x-1.5">
           <button
-            onClick={() => setZoom((z) => Math.max(0.3, +(z - 0.15).toFixed(2)))}
+            onClick={() => setZoom((z) => Math.max(0.25, +(z - 0.1).toFixed(2)))}
             className="p-1 rounded hover:bg-stone-200 dark:hover:bg-[#25282F] text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition"
             title="Zoom Out"
           >
@@ -151,7 +185,7 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, id, tit
           </button>
           <span className="text-[10px] font-mono px-1">{Math.round(zoom * 100)}%</span>
           <button
-            onClick={() => setZoom((z) => Math.min(2.5, +(z + 0.15).toFixed(2)))}
+            onClick={() => setZoom((z) => Math.min(2.5, +(z + 0.1).toFixed(2)))}
             className="p-1 rounded hover:bg-stone-200 dark:hover:bg-[#25282F] text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition"
             title="Zoom In"
           >
@@ -167,9 +201,9 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, id, tit
           <button
             onClick={handleFit}
             className="px-2 py-0.5 rounded text-[11px] font-medium bg-stone-200/70 dark:bg-[#1E2128] border border-transparent dark:border-[#25282F] text-stone-700 dark:text-stone-300 hover:bg-stone-300 dark:hover:bg-[#2A2E37] transition"
-            title="Fit diagram into card container"
+            title="Fit diagram into card"
           >
-            {zoom !== 1 ? "100%" : "Fit"}
+            Fit
           </button>
           <div className="w-[1px] h-3.5 bg-stone-300 dark:bg-[#25282F] mx-1" />
           <button
@@ -183,28 +217,28 @@ export const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, id, tit
         </div>
       </div>
 
-      {/* SVG Canvas Container with Responsive Natural Height & Clean Scroll */}
-      <div 
+      {/* SVG Canvas — scrollable both axes, grows to fit natural height */}
+      <div
         ref={containerRef}
-        className="p-4 sm:p-6 overflow-auto flex justify-center items-center bg-[#FAF8F5]/50 dark:bg-[#17191E] min-h-[180px] max-h-[640px]"
+        className="overflow-auto bg-[#FAF8F5]/50 dark:bg-[#17191E]"
+        style={{ minHeight: `${canvasMinH}px`, maxHeight: `${canvasMaxH}px` }}
       >
         {svgContent ? (
-          <div 
-            style={{ 
-              transform: `scale(${zoom})`, 
-              transformOrigin: 'top center', 
+          <div
+            style={{
+              transform: `scale(${zoom})`,
+              transformOrigin: 'top left',
               transition: 'transform 0.15s ease-out',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              width: '100%'
+              display: 'inline-block',
+              padding: '24px',
+              minWidth: '100%',
             }}
-            className="mermaid-wrapper flex justify-center items-center"
+            className="mermaid-wrapper"
             dangerouslySetInnerHTML={{ __html: svgContent }}
           />
         ) : (
-          <div className="text-xs text-slate-400 dark:text-slate-500 animate-pulse font-mono self-center">
-            Rendering high-fidelity architecture diagram...
+          <div className="flex items-center justify-center h-48 text-xs text-slate-400 dark:text-slate-500 animate-pulse font-mono">
+            Rendering architecture diagram...
           </div>
         )}
       </div>

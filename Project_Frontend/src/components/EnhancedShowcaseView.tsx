@@ -1480,29 +1480,26 @@ export const EnhancedShowcaseView: React.FC<EnhancedShowcaseViewProps> = () => {
           {/* Flowchart 1 */}
           <div className="space-y-2">
             <h3 className="font-bold text-lg text-[#1C1917] dark:text-[#F3F4F6]">
-              1. Cascade Web Extraction & Anti-Bot Fallback Logic
+              1. Cascade Web Extraction &amp; Anti-Bot Fallback Logic
             </h3>
             <MermaidRenderer
               chart={`flowchart TD
     URL([Input Article URL]) --> S1["Strategy 1: Headless Crawl4AI<br/>(Playwright Chromium / JS Hydration)"]
     S1 --> S1b["Strategy 1b: Trafilatura DOM Extraction<br/>(News Article Heuristic Filter)"]
-    S1b --> Check1{"Is text valid?<br/>(len >= 250 chars)"}
-    Check1 -->|"YES"| CleanOutput["Sanitize Markdown & Regex Normalization"]
-    
-    Check1 -->|"NO: Paywall / Anti-Bot / Sparse DOM"| S2["Strategy 2: Crawl4AI Raw Markdown<br/>(Aggressive Regex Cleaner)"]
-    S2 --> Check2{"Is text valid?<br/>(len >= 250 chars)"}
-    Check2 -->|"YES"| CleanOutput
-    
+    S1b --> Check1{"Is text valid?<br/>len >= 250 chars"}
+    Check1 -->|"NO: Paywall / Anti-Bot"| S2["Strategy 2: Crawl4AI Raw Markdown<br/>(Aggressive Regex Cleaner)"]
+    S2 --> Check2{"Is text valid?<br/>len >= 250 chars"}
     Check2 -->|"NO: Empty Markdown"| S3["Strategy 3: Direct HTTP Request<br/>(Browser User-Agent Spoofing)"]
-    S3 --> S3Trafilatura["Feed Raw Response to Trafilatura"]
-    S3Trafilatura --> Check3{"Is text valid?<br/>(len >= 250 chars)"}
+    S3 --> S3b["Feed Raw Response to Trafilatura"]
+    S3b --> Check3{"Is text valid?<br/>len >= 250 chars"}
+    Check3 -->|"NO: Cloudflare / Blocked"| S4["Strategy 4: Semantic BeautifulSoup<br/>(Filter article, main, p tags)"]
+    S4 --> FinalCheck{"Final Length Check"}
+    FinalCheck -->|"Fail"| Err["Throw ExtractionException<br/>& Alert Celery DLQ"]
+    Check1 -->|"YES"| CleanOutput["Sanitize Markdown & Regex Normalization"]
+    Check2 -->|"YES"| CleanOutput
     Check3 -->|"YES"| CleanOutput
-    
-    Check3 -->|"NO: Cloudflare / Blocked"| S4["Strategy 4: Semantic BeautifulSoup DOM<br/>(Filter article, main, p tags)"]
-    S4 --> FinalValidate{"Final Length Check"}
-    FinalValidate -->|"Pass"| CleanOutput
-    FinalValidate -->|"Fail"| ErrorFallback["Throw ExtractionException & Alert Celery DLQ"]
-    CleanOutput --> RawTextPayload([Validated raw_text Payload])`}
+    FinalCheck -->|"Pass"| CleanOutput
+    CleanOutput --> Out([Validated raw_text Payload])`}
               title="Cascade Web Extraction Fallback Decision Logic"
             />
           </div>

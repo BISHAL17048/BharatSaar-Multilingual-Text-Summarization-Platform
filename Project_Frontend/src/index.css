@@ -61,19 +61,14 @@
 
 /* Mermaid SVG sizing & card containment */
 .mermaid-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  margin: 0 auto;
+  display: inline-block;
 }
 
 .mermaid-wrapper svg {
   display: block !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  /* Do NOT force width:100% — let SVG render at natural intrinsic size */
+  max-width: none !important;
   height: auto !important;
-  margin: 0 auto !important;
   border-radius: 0.5rem;
 }
 
