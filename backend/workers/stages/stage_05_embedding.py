@@ -1,4 +1,5 @@
 import os
+import gc
 import torch
 from workers.celery_app import celery_app
 from workers.stages.stage_01_detection import sync_update_job, run_async
@@ -42,6 +43,9 @@ def _segment_and_chunk(text: str) -> list[str]:
     sat_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "model_server", "weights", "sat-3l-sm"))
     print(f"Loading SaT from {sat_path}...")
     sat_model = SaT(sat_path)
+    # Move SaT to CUDA if available for faster segmentation
+    if torch.cuda.is_available():
+        sat_model.to("cuda")
     
     # Actually, SemanticSplitterNodeParser expects a whole document string and splits it by sentences internally.
     # To force it to use our SaT sentences, we can define a custom sentence splitter function inside it!
@@ -58,8 +62,16 @@ def _segment_and_chunk(text: str) -> list[str]:
     )
     
     nodes = splitter.get_nodes_from_documents([Document(text=text)])
+    chunks = [node.get_content() for node in nodes]
     
-    return [node.get_content() for node in nodes]
+    # Unload SaT from VRAM immediately after segmentation
+    del sat_model
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    print("Unloaded SaT from VRAM.")
+    
+    return chunks
 
 async def process_embeddings(text: str, user_id: str, doc_id: str, metadata: dict):
     # Chunk the text using SaT + Semantic Splitter

@@ -95,37 +95,61 @@ def _back_translate_and_overwrite(
 ):
     """
     Back-translates the English Qwen summary into the original low-resource
-    language using Sarvam, then overwrites the MongoDB document so that the
-    stored (and displayed) summary is always in the document's native language.
+    language using Sarvam (isolated subprocess), then overwrites MongoDB.
+    VRAM is fully released when the subprocess exits.
     """
+    import json, subprocess, tempfile
     original_language_name = previous_result.get("original_language_name", "")
     intelligence = previous_result.get("intelligence", {})
     if not original_language_name:
         return
 
-    print(f"[{job_id}] Back-translating English summary to {original_language_name} using Sarvam (Isolated)...")
+    print("[" + job_id + "] Back-translating English summary to " + original_language_name + " (isolated subprocess)...")
+
+    sarvam_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "run_sarvam_isolated.py"))
+    kw_str = ", ".join(keywords) if keywords else ""
+    texts_to_translate = [headline, detailed_summary, bullet_summary, kw_str]
+
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json", encoding="utf-8") as fin:
+        json.dump({"texts": texts_to_translate, "target_language": original_language_name}, fin, ensure_ascii=False)
+        input_file = fin.name
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json", encoding="utf-8") as fout:
+        output_file = fout.name
 
     try:
-        from workers.stages.run_sarvam_isolated import load_and_run_sarvam_isolated
+        res = subprocess.run(
+            [sys.executable, sarvam_script, input_file, output_file],
+            capture_output=True, text=True, env=os.environ.copy()
+        )
+        if res.stdout:
+            print(res.stdout)
+        if res.returncode != 0:
+            print("[" + job_id + "] Back-translate subprocess FAILED:", res.stderr)
+            return
 
-        tasks = [
-            {"id": "headline", "text": headline, "target_language": original_language_name},
-            {"id": "detailed", "text": detailed_summary, "target_language": original_language_name},
-            {"id": "bullet", "text": bullet_summary, "target_language": original_language_name},
-        ]
-        kw_str = ", ".join(keywords) if keywords else ""
-        if kw_str:
-            tasks.append({"id": "keywords", "text": kw_str, "target_language": original_language_name})
+        with open(output_file, "r", encoding="utf-8") as f:
+            translations = json.load(f).get("translations", texts_to_translate)
 
-        results = load_and_run_sarvam_isolated(tasks)
+        native_headline  = translations[0] if len(translations) > 0 else headline
+        native_detailed  = translations[1] if len(translations) > 1 else detailed_summary
+        native_bullet    = translations[2] if len(translations) > 2 else bullet_summary
+        native_kw_str    = translations[3] if len(translations) > 3 else kw_str
+        native_keywords  = [k.strip() for k in native_kw_str.split(",")] if native_kw_str else keywords
 
-        native_headline = results.get("headline", headline)
-        native_detailed = results.get("detailed", detailed_summary)
-        native_bullet   = results.get("bullet", bullet_summary)
-        native_kw_str   = results.get("keywords", kw_str)
-        native_keywords = [k.strip() for k in native_kw_str.split(",")] if native_kw_str else keywords
+        import re
+        if native_bullet:
+            b_lines = [l.strip() for l in native_bullet.splitlines() if l.strip()]
+            if len(b_lines) <= 1 and len(native_bullet) > 100:
+                s_lines = [s.strip() for s in re.split(r"(?<=[।\.\?!])\s+", native_bullet) if s.strip()]
+                if len(s_lines) > 1:
+                    b_lines = s_lines
+            formatted_bullets = []
+            for bl in b_lines:
+                clean = re.sub(r"^[-*•–—]\s*", "", bl)
+                clean = re.sub(r"^\d+[\.\)]\s*", "", clean).strip()
+                formatted_bullets.append(f"- {clean}")
+            native_bullet = "\n".join(formatted_bullets)
 
-        # Overwrite the English summary in MongoDB with the original-language version
         run_async(
             async_update_mongo(
                 doc_id=doc_id,
@@ -138,10 +162,16 @@ def _back_translate_and_overwrite(
                 keywords=native_keywords
             )
         )
-        print(f"[{job_id}] Back-translation complete. Summary is now in {original_language_name}.")
+        print("[" + job_id + "] Back-translation complete. Summary is now in " + original_language_name + ".")
 
-    except Exception as e:
-        print(f"[{job_id}] Back-translation failed: {e}. English summary will be retained.")
+    except Exception as exc:
+        print("[" + job_id + "] Back-translation failed:", exc)
+    finally:
+        for p in (input_file, output_file):
+            try:
+                os.remove(p)
+            except Exception:
+                pass
 
 async def build_context_from_chroma(user_id: str, doc_id: str, keywords: list, fallback_text: str) -> str:
     """Queries ChromaDB using BGE-M3 for long context retrieval, scoped to the current document."""

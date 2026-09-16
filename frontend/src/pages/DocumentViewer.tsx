@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader2, Sparkles, Globe2, FileText, User } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { apiClient } from '../api/axios';
 import { ENDPOINTS } from '../api/endpoints';
 import { useHistory } from '../contexts/HistoryContext';
@@ -104,7 +104,7 @@ export default function DocumentViewer() {
   useEffect(() => {
     if (!id) return;
 
-    let intervalId: NodeJS.Timeout;
+    let intervalId: ReturnType<typeof setInterval>;
     let stopped = false;
 
     const fetchStatus = async () => {
@@ -143,7 +143,7 @@ export default function DocumentViewer() {
 
   // Translation Polling Effect
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    let intervalId: ReturnType<typeof setInterval>;
     if (isTranslating && docData?._id) {
       intervalId = setInterval(async () => {
         try {
@@ -225,6 +225,23 @@ export default function DocumentViewer() {
       return docData?.[field] || "";
     }
     return docData.translations[displayLanguage][field] || "";
+  };
+
+  const formatBulletSummary = (content: string) => {
+    if (!content) return '';
+    let lines = content.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length <= 1 && content.length > 100) {
+      const sentences = content.split(/(?<=[।\.\?!])\s+/).map(s => s.trim()).filter(Boolean);
+      if (sentences.length > 1) {
+        lines = sentences;
+      }
+    }
+    return lines
+      .map(line => {
+        const clean = line.replace(/^[-*•–—]\s*/, '').replace(/^\d+[\.\)]\s*/, '').trim();
+        return `- ${clean}`;
+      })
+      .join('\n');
   };
 
   const getUIString = (key: string, fallback: string) => {
@@ -328,11 +345,11 @@ export default function DocumentViewer() {
                   {isTyping && <span className="inline-block w-2 h-4 bg-primary ml-1 animate-pulse align-middle"></span>}
                 </p>
 
-                {docData.bullet_summary && !isTyping && (
+                {(docData.bullet_summary || getLocalized('bullet_summary')) && !isTyping && (
                   <div className="mt-8">
                     <h3 className="text-lg font-medium text-white mb-3">{getUIString('keyTakeaways', 'Key Takeaways')}</h3>
                     <div className="text-[15px] whitespace-pre-wrap leading-relaxed text-zinc-300 bg-secondary/50 p-4 rounded-xl border border-zinc-800/50">
-                      {getLocalized('bullet_summary')}
+                      {formatBulletSummary(getLocalized('bullet_summary'))}
                     </div>
                   </div>
                 )}

@@ -87,6 +87,9 @@ def run_bertopic(text: str) -> list:
         del embed_model
         del topic_model
         gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        print("Unloaded BERTopic/IndicBERT from VRAM.")
         return detected_topics[:5]
     except Exception as e:
         print(f"BERTopic failed: {e}")
