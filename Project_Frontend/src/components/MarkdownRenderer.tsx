@@ -97,11 +97,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ blocks }) =>
 
           case 'table': {
             return (
-              <div key={idx} className="my-6 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
+              <div key={idx} className="my-6 overflow-hidden rounded-xl border border-[#EAE4DC] dark:border-[#25282F] shadow-sm bg-white dark:bg-[#17191E]">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-sm">
                     <thead>
-                      <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700">
+                      <tr className="bg-[#FAF8F5] dark:bg-[#1E2128] text-slate-900 dark:text-slate-100 border-b border-[#EAE4DC] dark:border-[#25282F]">
                         {block.headers.map((header, hIdx) => (
                           <th key={hIdx} className="px-4 py-3 font-semibold tracking-wider text-xs uppercase">
                             <FormattedText text={header} />
@@ -109,11 +109,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ blocks }) =>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                    <tbody className="divide-y divide-[#EAE4DC] dark:divide-[#25282F]">
                       {block.rows.map((row, rIdx) => (
                         <tr
                           key={rIdx}
-                          className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                          className="hover:bg-slate-50 dark:hover:bg-[#1F2229] transition-colors"
                         >
                           {row.map((cell, cIdx) => (
                             <td key={cIdx} className="px-4 py-3 text-slate-700 dark:text-slate-300 text-sm">

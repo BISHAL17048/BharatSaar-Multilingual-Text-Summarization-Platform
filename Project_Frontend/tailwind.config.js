@@ -8,6 +8,45 @@ export default {
   theme: {
     extend: {
       colors: {
+        terracotta: {
+          50: '#FDF6F2',
+          100: '#FBECE4',
+          200: '#F7D7C8',
+          300: '#F0B7A0',
+          400: '#E68D6F',
+          500: '#D96B43',
+          600: '#C85A32',
+          700: '#A74424',
+          800: '#873921',
+          900: '#6F311F',
+          950: '#3D170D',
+        },
+        sand: {
+          50: '#FAF8F5',
+          100: '#F5F0E8',
+          200: '#EBE2D3',
+          300: '#DCCFBA',
+          400: '#C8B69B',
+          500: '#B29D7D',
+          600: '#9B8365',
+          700: '#7D6952',
+          800: '#655544',
+          900: '#53473A',
+        },
+        obsidian: {
+          50: '#F6F7F9',
+          100: '#ECEEF2',
+          200: '#D5D9E2',
+          300: '#B0B8C8',
+          400: '#8693AB',
+          500: '#677490',
+          600: '#515D77',
+          700: '#424C62',
+          800: '#262A33',
+          850: '#1C1F26',
+          900: '#17191E',
+          950: '#111215',
+        },
         academic: {
           50: '#f4f6fb',
           100: '#e8edf6',
@@ -31,12 +70,15 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Outfit', 'Inter', 'sans-serif'],
+        serif: ['Newsreader', 'Fraunces', 'Playfair Display', 'Georgia', 'serif'],
+        display: ['Newsreader', 'Fraunces', 'Georgia', 'serif'],
+        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['Fira Code', 'Consolas', 'monospace'],
       },
       boxShadow: {
-        'glow': '0 0 25px -5px rgba(79, 70, 229, 0.25)',
+        'warm': '0 4px 25px -4px rgba(200, 90, 50, 0.08)',
+        'warm-glow': '0 0 35px -5px rgba(200, 90, 50, 0.25)',
+        'glow': '0 0 25px -5px rgba(200, 90, 50, 0.25)',
         'glow-saffron': '0 0 25px -5px rgba(255, 103, 31, 0.25)',
       }
     },

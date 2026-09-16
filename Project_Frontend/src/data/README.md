@@ -31,8 +31,9 @@ BharatSaar solves the critical problem of information overload in regional India
 
 Watch the comprehensive video demonstrations and technical walkthrough of BharatSaar:
 
-- **Full Project Demonstration & Overview**: [Watch on YouTube (Demo 1)](https://youtu.be/wqKhxgo57Ic?si=sdK4Q1DcZ3QtAic0) — `https://youtu.be/wqKhxgo57Ic?si=sdK4Q1DcZ3QtAic0`
-- **System Architecture & Technical Walkthrough**: [Watch on YouTube (Demo 2)](https://youtu.be/0pyGsjMlHQE?si=ozLdr8IT0u_k2qSA) — `https://youtu.be/0pyGsjMlHQE?si=ozLdr8IT0u_k2qSA`
+- **Comprehensive Project Explanation**: [Watch on YouTube (Demo 1)](https://youtu.be/wqKhxgo57Ic?si=sdK4Q1DcZ3QtAic0) — `https://youtu.be/wqKhxgo57Ic?si=sdK4Q1DcZ3QtAic0`
+- **Mathematical Foundations & Algorithmic Equations**: [Watch on YouTube (Demo 2)](https://youtu.be/3KL0IA6eWuI?si=n1_CDyX-ZWodNDCW) — `https://youtu.be/3KL0IA6eWuI?si=n1_CDyX-ZWodNDCW`
+- **Full System Demonstration & Technical Walkthrough**: [Watch on YouTube (Demo 3)](https://youtu.be/0pyGsjMlHQE?si=ozLdr8IT0u_k2qSA) — `https://youtu.be/0pyGsjMlHQE?si=ozLdr8IT0u_k2qSA`
 
 ---
 

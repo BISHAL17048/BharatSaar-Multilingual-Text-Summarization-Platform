@@ -31,8 +31,9 @@ BharatSaar solves the critical problem of information overload in regional India
 
 Watch the comprehensive video demonstrations and technical walkthrough of BharatSaar:
 
-- **Full Project Demonstration & Overview**: [Watch on YouTube (Demo 1)](https://youtu.be/wqKhxgo57Ic?si=sdK4Q1DcZ3QtAic0) — `https://youtu.be/wqKhxgo57Ic?si=sdK4Q1DcZ3QtAic0`
-- **System Architecture & Technical Walkthrough**: [Watch on YouTube (Demo 2)](https://youtu.be/0pyGsjMlHQE?si=ozLdr8IT0u_k2qSA) — `https://youtu.be/0pyGsjMlHQE?si=ozLdr8IT0u_k2qSA`
+- **Comprehensive Project Explanation**: [Watch on YouTube (Demo 1)](https://youtu.be/wqKhxgo57Ic?si=sdK4Q1DcZ3QtAic0) — `https://youtu.be/wqKhxgo57Ic?si=sdK4Q1DcZ3QtAic0`
+- **Mathematical Foundations & Algorithmic Equations**: [Watch on YouTube (Demo 2)](https://youtu.be/3KL0IA6eWuI?si=n1_CDyX-ZWodNDCW) — `https://youtu.be/3KL0IA6eWuI?si=n1_CDyX-ZWodNDCW`
+- **Full System Demonstration & Technical Walkthrough**: [Watch on YouTube (Demo 3)](https://youtu.be/0pyGsjMlHQE?si=ozLdr8IT0u_k2qSA) — `https://youtu.be/0pyGsjMlHQE?si=ozLdr8IT0u_k2qSA`
 
 ---
 
@@ -646,6 +647,310 @@ flowchart TD
 
 ---
 
+## 💻 Core Pipeline Implementation Logic (Production Python Engine)
+
+Below are the production Python source code implementations of BharatSaar's core asynchronous pipeline stages, detailing the algorithms for language detection, low-resource English pivoting, neural chunking, cross-encoder deduplication, and isolated LLM summarization.
+
+### 1. Language Identification & Dynamic Fork Dispatcher (`stage_03_linguistics.py`)
+
+```python
+import os
+import langdetect
+import fasttext
+from workers.celery_app import celery_app
+from workers.stages.stage_01_detection import sync_update_job
+from models.job import JobStatus
+
+LANGUAGE_MAP = {
+    "asm_Beng": "Assamese", "ben_Beng": "Bengali", "brx_Deva": "Bodo", "doi_Deva": "Dogri", 
+    "gom_Deva": "Konkani", "kok_Deva": "Konkani", "guj_Gujr": "Gujarati", "hin_Deva": "Hindi", 
+    "kan_Knda": "Kannada", "kas_Arab": "Kashmiri", "mai_Deva": "Maithili", "mal_Mlym": "Malayalam", 
+    "mni_Beng": "Manipuri", "mar_Deva": "Marathi", "nep_Deva": "Nepali", "ori_Orya": "Odia", 
+    "pan_Guru": "Punjabi", "san_Deva": "Sanskrit", "sat_Olck": "Santali", "snd_Arab": "Sindhi", 
+    "tam_Taml": "Tamil", "tel_Telu": "Telugu", "urd_Arab": "Urdu", "eng_Latn": "English"
+}
+
+@celery_app.task(bind=True, name="stages.linguistics")
+def run_linguistics(self, previous_result: dict):
+    job_id = previous_result["job_id"]
+    sync_update_job(job_id, JobStatus.PROCESSING, "Linguistic Analysis", 40)
+    
+    text = previous_result.get("raw_text", "")
+    sample_text = text[:2000].replace("\n", " ").strip()
+    
+    # 1. Native FastText / IndicLID detection
+    try:
+        model = get_fasttext_model()
+        if model:
+            predictions = model.predict(sample_text, k=1)
+            raw_label = predictions[0][0].replace("__label__", "")
+            confidence = float(predictions[1][0])
+            language_name = LANGUAGE_MAP.get(raw_label, "Unknown")
+            label = raw_label.split('_')[0] if "_" in raw_label else raw_label
+    except Exception:
+        label = langdetect.detect(sample_text)
+        language_name = label.upper()
+
+    # 2. Indic NLP Unicode Normalization
+    try:
+        from indicnlp.normalize.indic_normalize import IndicNormalizerFactory
+        if label in ["hi", "sa", "mr", "ne", "kok", "as", "bn", "gu", "pa", "or", "ta", "te", "kn", "ml"]:
+            factory = IndicNormalizerFactory()
+            normalizer = factory.get_normalizer(label)
+            normalized_text = normalizer.normalize(text)
+    except Exception:
+        normalized_text = text
+
+    previous_result["raw_text"] = normalized_text
+    previous_result["language_meta"] = {
+        "language_code": label,
+        "language_name": language_name,
+        "confidence": confidence
+    }
+
+    # 3. Dynamic English Pivot Routing Decision
+    LOW_RESOURCE_LANGUAGES = {
+        "Bodo": "brx_Deva", "Dogri": "doi_Deva", "Kashmiri": "kas_Arab",
+        "Konkani": "gom_Deva", "Manipuri": "mni_Beng", "Sanskrit": "san_Deva",
+        "Santali": "sat_Olck"
+    }
+    if language_name in LOW_RESOURCE_LANGUAGES:
+        previous_result["needs_english_pivot"] = True
+        previous_result["original_language_name"] = language_name
+        previous_result["original_language_code"] = LOW_RESOURCE_LANGUAGES[language_name]
+    else:
+        previous_result["needs_english_pivot"] = False
+
+    return previous_result
+```
+
+### 2. English Pivot Translation via Isolated Subprocess (`stage_03b_pivot_translation.py`)
+
+```python
+import os, sys, json, subprocess, tempfile
+from workers.celery_app import celery_app
+
+_SARVAM_SCRIPT = os.path.abspath(os.path.join(os.path.dirname(__file__), "run_sarvam_isolated.py"))
+
+def _chunk_text(text, max_chars=500):
+    lines = text.split("\n")
+    chunks, cur = [], ""
+    for line in lines:
+        if len(cur) + len(line) > max_chars:
+            if cur: chunks.append(cur.strip())
+            cur = line + "\n"
+        else:
+            cur += line + "\n"
+    if cur: chunks.append(cur.strip())
+    return chunks or [text]
+
+def _run_sarvam_subprocess(texts, target_language="English", source_lang="eng_Latn"):
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json", encoding="utf-8") as fin:
+        json.dump({"texts": texts, "target_language": target_language, "source_lang": source_lang}, fin)
+        input_file = fin.name
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json", encoding="utf-8") as fout:
+        output_file = fout.name
+    try:
+        res = subprocess.run([sys.executable, _SARVAM_SCRIPT, input_file, output_file], capture_output=True, text=True)
+        if res.returncode == 0:
+            with open(output_file, "r", encoding="utf-8") as f:
+                return json.load(f).get("translations", texts)
+        return texts
+    finally:
+        for p in (input_file, output_file):
+            if os.path.exists(p): os.remove(p)
+
+@celery_app.task(bind=True, name="stages.pivot_translation")
+def run_pivot_translation(self, previous_result: dict):
+    if not previous_result.get("needs_english_pivot", False):
+        return previous_result
+
+    text = previous_result.get("raw_text", "")
+    chunks = _chunk_text(text, max_chars=500)
+    translated = _run_sarvam_subprocess(chunks, target_language="English")
+    english_text = "\n".join(translated)
+
+    previous_result["raw_text"] = english_text
+    previous_result["language_meta"]["language_name"] = "English"
+    previous_result["language_meta"]["language_code"] = "en"
+    return previous_result
+```
+
+### 3. SaT Sentence Boundaries & 95th-Percentile Semantic Chunking (`stage_05_embedding.py`)
+
+```python
+import os, gc, torch
+from wtpsplit import SaT
+from llama_index.core.node_parser import SemanticSplitterNodeParser
+from llama_index.core.embeddings import BaseEmbedding
+from llama_index.core.schema import Document
+
+class LocalBGEM3Embedding(BaseEmbedding):
+    def _get_text_embedding(self, text: str) -> list[float]:
+        model = get_bge_model()
+        return model.encode(text, normalize_embeddings=True).tolist()
+
+def _segment_and_chunk(text: str) -> list[str]:
+    sat_path = os.path.abspath("model_server/weights/sat-3l-sm")
+    sat_model = SaT(sat_path)
+    if torch.cuda.is_available():
+        sat_model.to("cuda")
+
+    def custom_sat_splitter(t: str) -> list[str]:
+        return sat_model.split(t)
+
+    embed_model = LocalBGEM3Embedding()
+    splitter = SemanticSplitterNodeParser(
+        buffer_size=1,
+        breakpoint_percentile_threshold=95,
+        embed_model=embed_model,
+        sentence_splitter=custom_sat_splitter
+    )
+    
+    nodes = splitter.get_nodes_from_documents([Document(text=text)])
+    chunks = [node.get_content() for node in nodes]
+    
+    del sat_model
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        
+    return chunks
+```
+
+### 4. Intelligence Extraction & Cross-Encoder Deduplication (`stage_06_intelligence.py`)
+
+```python
+import torch, gc
+from keybert import KeyBERT
+from sentence_transformers import SentenceTransformer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+def load_and_run_keybert(text: str) -> list[str]:
+    st_model = SentenceTransformer("model_server/weights/IndicBERT-v3-270M")
+    kw_model = KeyBERT(model=st_model)
+    keywords = kw_model.extract_keywords(text[:1500], keyphrase_ngram_range=(1, 2), top_n=5)
+    return [kw[0] for kw in keywords]
+
+def run_reranker_deduplication(events: list) -> list:
+    weights_path = "model_server/weights/bge-reranker-v2-m3"
+    tokenizer = AutoTokenizer.from_pretrained(weights_path)
+    model = AutoModelForSequenceClassification.from_pretrained(weights_path).to("cuda")
+    model.eval()
+    
+    unique_events = []
+    for event in events:
+        event_text = event["text"]
+        is_duplicate = False
+        for unique in unique_events:
+            pairs = [[event_text, unique["text"]]]
+            with torch.no_grad():
+                inputs = tokenizer(pairs, padding=True, truncation=True, return_tensors='pt', max_length=512).to("cuda")
+                scores = model(**inputs).logits.view(-1).float()
+                if scores[0] > 1.0:
+                    is_duplicate = True
+                    break
+        if not is_duplicate:
+            unique_events.append(event)
+    return unique_events
+```
+
+### 5. Long-Context RAG Retrieval & 4-Bit NF4 Qwen3-4B Subprocess (`run_qwen_isolated.py`)
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+import torch, json, re
+
+def run_isolated(input_file: str, output_file: str):
+    with open(input_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    text = data.get("text", "")
+    language = data.get("detected_language", "the exact same language")
+    
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_compute_dtype=torch.float16
+    )
+    model = AutoModelForCausalLM.from_pretrained(
+        "model_server/weights/Qwen3-4B",
+        quantization_config=bnb_config,
+        device_map="cuda:0"
+    )
+    tokenizer = AutoTokenizer.from_pretrained("model_server/weights/Qwen3-4B")
+    
+    prompt = (
+        f"<|im_start|>system\n"
+        f"You are a highly precise summarizer. You MUST output ONLY in {language}. "
+        f"Output strictly: Headline, Detailed Summary, Bullet Summary, Keywords.<|im_end|>\n"
+        f"<|im_start|>user\n{text[:12000]}<|im_end|>\n<|im_start|>assistant\n"
+    )
+    
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    outputs = model.generate(**inputs, max_new_tokens=4096, temperature=0.3, repetition_penalty=1.15)
+    full_output = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+    
+    headline, summary, bullets, keywords = parse_structured_payload(full_output)
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump({"headline": headline, "detailed_summary": summary, "bullet_summary": bullets, "keywords": keywords}, f)
+```
+
+### 6. Native Back-Translation Engine & MongoDB Commitment (`stage_08_translation.py`)
+
+```python
+def _back_translate_and_overwrite(job_id, doc_id, previous_result, headline, detailed_summary, bullet_summary, keywords):
+    orig_lang = previous_result.get("original_language_name")
+    
+    texts = [headline, detailed_summary, bullet_summary, ", ".join(keywords)]
+    translated = _run_sarvam_subprocess(texts, target_language=orig_lang, source_lang="eng_Latn")
+    
+    native_headline = translated[0]
+    native_summary = translated[1]
+    native_bullets = translated[2]
+    native_keywords = [k.strip() for k in translated[3].split(",")]
+
+    async_update_mongo(
+        doc_id=doc_id,
+        headline=native_headline,
+        detailed_summary=native_summary,
+        bullet_summary=native_bullets,
+        keywords=native_keywords,
+        language=orig_lang
+    )
+```
+
+### 7. Celery Asynchronous Pipeline Dispatcher (`dispatcher.py`)
+
+```python
+from celery import chain
+import workers.stages.stage_01_detection as s1
+import workers.stages.stage_02_parsing as s2
+import workers.stages.stage_03_linguistics as s3
+import workers.stages.stage_03b_pivot_translation as s3b
+import workers.stages.stage_04_refinement as s4
+import workers.stages.stage_05_embedding as s5
+import workers.stages.stage_06_intelligence as s6
+import workers.stages.stage_07_summarization as s7
+
+class PipelineDispatcher:
+    @staticmethod
+    def trigger_full_pipeline(job_id: str, document_id: str, url: str = None, file_path: str = None):
+        workflow = chain(
+            s1.run_detection.s(job_id, document_id, url=url, file_path=file_path),
+            s2.run_parsing.s(),
+            s3.run_linguistics.s(),
+            s3b.run_pivot_translation.s(),
+            s4.run_refinement.s(),
+            s5.run_embedding.s(),
+            s6.run_intelligence.s(),
+            s7.run_summarization.s()
+        )
+        workflow.apply_async()
+```
+
+---
+
 ## 📐 Mathematical Foundations & Algorithmic Equations (Stage-by-Stage)
 
 Every stage of BharatSaar is governed by formal mathematical optimization criteria, statistical hypothesis tests, loss functions, and vector space linear algebra. Below is the comprehensive algorithmic formulation for **every single stage of the pipeline**, covering both the Common Ingestion Phase, the Normal-Resource Direct Path (Part 1), and the Low-Resource English Pivot Architecture (Part 2).
@@ -1070,19 +1375,19 @@ gantt
     section Extraction
     Stage 1 & 2 (Crawl4AI + Trafilatura)   :active, s1, 0, 2
     section Linguistics
-    Stage 3 (FastText IndicLID + IndicNLP) :s2, after s1, 1
-    Stage 3b (Sarvam Pivot Translation)    :crit, s3, after s2, 5
+    Stage 3 (FastText IndicLID + IndicNLP) :active, s2, 2, 3
+    Stage 3b (Sarvam Pivot Translation)    :crit, s3, 3, 8
     section Refinement
-    Stage 4 (IndicXlit + Qwen3-1.7B)       :s4, after s3, 4
+    Stage 4 (IndicXlit + Qwen3-1.7B)       :active, s4, 8, 12
     section Vector Space
-    Stage 5 (SaT + BGE-M3 Chunking)        :s5, after s4, 3
+    Stage 5 (SaT + BGE-M3 Chunking)        :active, s5, 12, 15
     section Intelligence
-    Stage 6 (KeyBERT + BERTopic + Reranker):s6, after s5, 3
+    Stage 6 (KeyBERT + BERTopic + Reranker):active, s6, 15, 17
     section Generation
-    Stage 7 (ChromaDB Retrieval + Qwen 4B) :crit, s7, after s6, 12
-    Stage 7c (Sarvam Back-Translation)     :crit, s8, after s7, 4
+    Stage 7 (ChromaDB Retrieval + Qwen 4B) :crit, s7, 17, 29
+    Stage 7c (Sarvam Back-Translation)     :crit, s8, 29, 33
     section Persistence
-    Stage 8 (MongoDB Commit + UI Broadcast):s9, after s8, 1
+    Stage 8 (MongoDB Commit + UI Broadcast):active, s9, 33, 34
 ```
 
 #### Detailed Stage Runtime Metrics

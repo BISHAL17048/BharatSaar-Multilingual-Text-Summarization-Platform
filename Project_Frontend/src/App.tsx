@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar } from './components/Navbar';
-import { TableOfContents } from './components/TableOfContents';
 import { EnhancedShowcaseView } from './components/EnhancedShowcaseView';
 import { CompleteReadmeView } from './components/CompleteReadmeView';
 import { SearchModal } from './components/SearchModal';
 import { ContentAuditModal } from './components/ContentAuditModal';
 import { extractTableOfContents } from './utils/readmeParser';
 import { README_RAW } from './data/readmeRaw';
-import { School, Github, ShieldCheck } from 'lucide-react';
 
 export const App: React.FC = () => {
   // Theme state with local storage persistence
@@ -23,7 +21,6 @@ export const App: React.FC = () => {
   // Modal states
   const [searchOpen, setSearchOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
-  const [activeTocId, setActiveTocId] = useState<string>('');
 
   // Extract Table of Contents from README
   const tocItems = useMemo(() => {
@@ -57,25 +54,6 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Intersection Observer for scroll spy
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveTocId(entry.target.id);
-          }
-        }
-      },
-      { rootMargin: '-80px 0% -60% 0%' }
-    );
-
-    const headingElements = document.querySelectorAll('h1[id], h2[id], h3[id], section[id]');
-    headingElements.forEach((el) => observer.observe(el));
-
-    return () => observer.disconnect();
-  }, [viewMode]);
-
   const handleNavigateToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
@@ -84,7 +62,17 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 transition-colors duration-200">
+    <div className="min-h-screen flex flex-col bg-[#FAF7F2] dark:bg-[#111215] text-[#1C1917] dark:text-[#F3F4F6] transition-colors duration-300 relative overflow-x-hidden selection:bg-[#C85A32] selection:text-white">
+      {/* Ambient Atmospheric Radial Lighting (Matches User Reference Screenshots) */}
+      <div 
+        aria-hidden="true" 
+        className="pointer-events-none fixed -top-24 -right-24 w-[600px] h-[600px] bg-gradient-to-bl from-amber-300/25 via-orange-300/15 to-transparent dark:from-amber-600/15 dark:via-orange-700/8 dark:to-transparent rounded-full blur-3xl z-0" 
+      />
+      <div 
+        aria-hidden="true" 
+        className="pointer-events-none fixed -bottom-32 -left-32 w-[550px] h-[550px] bg-gradient-to-tr from-emerald-200/20 via-teal-100/15 to-transparent dark:from-emerald-700/8 dark:via-teal-800/5 dark:to-transparent rounded-full blur-3xl z-0" 
+      />
+
       {/* Top Navigation */}
       <Navbar
         darkMode={darkMode}
@@ -96,92 +84,31 @@ export const App: React.FC = () => {
       />
 
       {/* Main Container */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 py-6">
-          {/* Main Content Area */}
-          <main className={viewMode === 'enhanced' ? 'lg:col-span-9' : 'lg:col-span-9'}>
-            {viewMode === 'enhanced' ? (
-              <EnhancedShowcaseView onSwitchToReadme={() => setViewMode('readme')} />
-            ) : (
-              <CompleteReadmeView />
-            )}
-          </main>
-
-          {/* Sticky Sidebar Table of Contents */}
-          <aside className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-28 space-y-4">
-              <TableOfContents
-                items={tocItems}
-                activeId={activeTocId}
-                onItemClick={handleNavigateToSection}
-              />
-
-              {/* Quick Completeness Card */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-xs space-y-2">
-                <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 font-bold">
-                  <ShieldCheck size={16} />
-                  <span>README Completeness</span>
-                </div>
-                <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
-                  100% of the 1,238 lines from README.md are preserved across both views without omission.
-                </p>
-                <button
-                  onClick={() => setAuditOpen(true)}
-                  className="w-full py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold text-[11px] transition text-center"
-                >
-                  View Audit Report
-                </button>
-              </div>
-            </div>
-          </aside>
-        </div>
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-6 relative z-10">
+        <main className="w-full">
+          {viewMode === 'enhanced' ? (
+            <EnhancedShowcaseView onSwitchToReadme={() => setViewMode('readme')} />
+          ) : (
+            <CompleteReadmeView />
+          )}
+        </main>
       </div>
 
-      {/* Academic Footer */}
-      <footer className="mt-16 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 py-10 transition-colors">
+      {/* Editorial Academic Footer */}
+      <footer className="mt-20 bg-white/70 dark:bg-[#15171C]/80 backdrop-blur-md border-t border-[#EAE4DC] dark:border-[#25282F] py-12 transition-colors relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg">
-                भ
-              </div>
-              <div>
-                <span className="font-display font-bold text-lg text-slate-900 dark:text-white">
-                  BharatSaar
-                </span>
-                <p className="text-xs text-slate-500">
-                  Multilingual Text Summarization Platform across 22 Indic Languages
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-600 dark:text-slate-400 font-medium">
-              <span className="flex items-center gap-1.5">
-                <School size={14} className="text-indigo-500" />
-                Indian Institute of Technology Guwahati
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <span className="font-sans font-extrabold text-lg text-[#1C1917] dark:text-[#F3F4F6] tracking-tight">
+                BharatSaar <span className="font-normal text-stone-400">⋅</span> <span className="text-sm font-semibold text-[#C85A32] dark:text-[#E76F51]">Multilingual Text Summarization Platform</span>
               </span>
-              <span>•</span>
-              <span>Department of Electronics and Electrical Engineering</span>
-              <span>•</span>
-              <a
-                href="https://github.com/BISHAL17048/BharatSaar-Multilingual-Text-Summarization-Platform"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1"
-              >
-                <Github size={14} />
-                GitHub Repository
-              </a>
+              <p className="text-xs text-[#78716C] dark:text-[#A8A29E] font-medium mt-0.5">
+                Multilingual Text Summarization Platform Across 22 Indic Languages
+              </p>
+              <p className="text-xs text-stone-600 dark:text-white font-normal mt-2">
+                © 2026 BharatSaar : Multilingual Text Summarization. All rights reserved.
+              </p>
             </div>
-          </div>
-
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 dark:text-slate-500 gap-3">
-            <p>
-              Project Advisor: <strong className="text-slate-800 dark:text-slate-300">Dr. Prithwijit Guha</strong> • Mentors: <strong className="text-slate-800 dark:text-slate-300">Ashwin Jacob Gigo</strong> & <strong className="text-slate-800 dark:text-slate-300">Amaan Irfan</strong>
-            </p>
-            <p className="font-mono text-[11px]">
-              Strict adherence to Meta AI RAG (arxiv: 2005.11401)
-            </p>
           </div>
         </div>
       </footer>
