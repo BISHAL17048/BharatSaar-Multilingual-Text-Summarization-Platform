@@ -81,7 +81,7 @@ export const EnhancedShowcaseView: React.FC<EnhancedShowcaseViewProps> = () => {
 
           {/* Comprehensive Platform Explanation */}
           <p className="text-base sm:text-lg text-stone-600 dark:text-stone-300 leading-relaxed max-w-3xl mx-auto font-sans">
-            BharatSaar is an advanced, AI-driven SaaS platform engineered to extract, analyze, and intelligently summarize news articles across <strong className="text-[#1C1917] dark:text-white font-semibold">22 Scheduled Indic languages</strong> and English. By leveraging a localized, high-throughput transformer pipeline, BharatSaar seamlessly handles complex long-context news articles from URLs. It breaks them down semantically, extracts critical named entities and topics, and generates highly accurate abstractive summaries—all while preserving the rich native context of low-resource regional languages.
+            BharatSaar is an advanced, AI-driven SaaS platform engineered to extract, analyze, and intelligently summarize news articles across <strong className="text-[#1C1917] dark:text-white font-semibold">22 Scheduled Indic languages</strong> and English. By leveraging a localized, high-throughput transformer pipeline, BharatSaar seamlessly handles complex long-context news articles from URLs. It breaks them down semantically, extracts critical named entities and topics, and generates highly accurate abstractive summaries—all while preserving the rich native context of both <strong className="text-[#1C1917] dark:text-white font-semibold">high-resource</strong> and <strong className="text-[#1C1917] dark:text-white font-semibold">low-resource</strong> regional languages.
           </p>
         </div>
       </section>
