@@ -27,7 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <a href="#hero" className="flex items-center space-x-3 group">
             <div className="w-10 h-10 rounded-xl bg-white shadow-sm border border-[#EAE4DC] dark:border-[#25282F] p-0.5 flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform">
               <img
-                src="/bharatsaar_emblem.png"
+                src={`${import.meta.env.BASE_URL}bharatsaar_emblem.png`}
                 alt="BharatSaar Emblem"
                 className="w-full h-full object-contain"
               />

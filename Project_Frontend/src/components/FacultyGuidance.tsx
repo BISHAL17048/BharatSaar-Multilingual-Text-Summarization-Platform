@@ -40,7 +40,7 @@ export const FacultyGuidance: React.FC = () => {
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
               <img
-                src="/prithwijit_guha.jpg"
+                src={`${import.meta.env.BASE_URL}prithwijit_guha.jpg`}
                 alt="Dr. Prithwijit Guha"
                 className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-[#EAE4DC] dark:border-[#25282F] shadow-md ring-4 ring-[#FAF8F5] dark:ring-[#1E2128] shrink-0"
               />
@@ -110,7 +110,7 @@ export const FacultyGuidance: React.FC = () => {
               {/* Mentor 1: Amaan Irfan (2nd Picture) */}
               <div className="p-3.5 rounded-2xl bg-white dark:bg-[#1C1F26] border border-[#EAE4DC] dark:border-[#2A2E37] flex items-center gap-3.5 shadow-xs">
                 <img
-                  src="/amaan_irfan.jpg"
+                  src={`${import.meta.env.BASE_URL}amaan_irfan.jpg`}
                   alt="Amaan Irfan"
                   className="w-14 h-14 rounded-xl object-cover shrink-0 border border-[#EAE4DC] dark:border-[#25282F] shadow-sm"
                 />
@@ -132,7 +132,7 @@ export const FacultyGuidance: React.FC = () => {
               {/* Mentor 2: Ashwin Jacob Gigo (3rd Picture) */}
               <div className="p-3.5 rounded-2xl bg-white dark:bg-[#1C1F26] border border-[#EAE4DC] dark:border-[#2A2E37] flex items-center gap-3.5 shadow-xs">
                 <img
-                  src="/ashwin_jacob_gigo.jpg"
+                  src={`${import.meta.env.BASE_URL}ashwin_jacob_gigo.jpg`}
                   alt="Ashwin Jacob Gigo"
                   className="w-14 h-14 rounded-xl object-cover shrink-0 border border-[#EAE4DC] dark:border-[#25282F] shadow-sm"
                 />
