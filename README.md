@@ -1518,7 +1518,6 @@ Percentage (%)
    ```env
    MONGO_URI="mongodb://localhost:27017"
    MONGO_DB_NAME="docintel"
-   SARVAM_API_KEY="your_sarvam_key_here"
    ```
 
 4. **Frontend Setup**

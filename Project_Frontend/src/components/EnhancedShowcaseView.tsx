@@ -2708,7 +2708,7 @@ class PipelineDispatcher:
               3. Environment Variables (backend/.env)
             </h4>
             <CodeBlock
-              code={`MONGO_URI="mongodb://localhost:27017"\nMONGO_DB_NAME="docintel"\nSARVAM_API_KEY="your_sarvam_key_here"`}
+              code={`MONGO_URI="mongodb://localhost:27017"\nMONGO_DB_NAME="docintel"`}
               language="env"
               title="backend/.env Configuration"
             />
